@@ -9,6 +9,8 @@ balance, shortfall probability, and runway date.
 
 **Status:** Week 1 foundation. The scaffold, shared libraries, database schema
 and CI are in place; feature modules land from Week 2 (see the roadmap below).
+**Status:** Specification phase — no application code yet. This repository
+currently holds the design documents the implementation will be built from.
 
 > ⚠️ Experimental / educational project. Non-commercial, THB only, not
 > financial advice.
@@ -223,6 +225,13 @@ TypeScript by default; Python is permitted **only** for S5 Level 3 Monte Carlo.
 ```
 
 The tree follows [AIDO.md §4](AIDO.md), the essentials of which are:
+├── AIDO.md      ← operating manual for AI agents
+├── SPEC.md      ← source of truth
+└── README.md    ← this file
+```
+
+The implementation will follow the tree documented in
+[AIDO.md §4](AIDO.md), the essentials of which are:
 
 - Business logic lives in `src/modules/`; route handlers only parse input, call
   a module, and format output.
@@ -257,6 +266,15 @@ CI runs format → lint → AI boundary → typecheck → test, plus a productio
 > ⚠️ `prisma/schema.prisma` is derived from the DDL in SPEC.md §3 S6, which
 > SPEC itself marks as reconstructed rather than original. Reconcile it with a
 > human before applying the first migration to a shared database.
+
+Nothing to run yet. When the scaffold lands, the shape will be:
+
+```bash
+npm install
+cp .env.example .env      # fill in the values below
+npx prisma migrate dev
+npm run dev
+```
 
 ### Environment variables
 
