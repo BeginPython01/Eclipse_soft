@@ -1,0 +1,9 @@
+.next
+node_modules
+coverage
+package-lock.json
+prisma/migrations
+
+# SPEC.md is the source of truth and AIDO.md governs how we work — their
+# formatting is authored, not generated. A formatter must never churn them.
+*.md

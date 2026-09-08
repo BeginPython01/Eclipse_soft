@@ -1,0 +1,18 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+.env
+.env.local
+.env.*.local
+
+.DS_Store
+*.log
+npm-debug.log*
+
+# Never commit real bank emails — fixtures must be redacted (SPEC §7, AIDO §5.4)
+tests/fixtures/emails/*.raw

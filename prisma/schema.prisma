@@ -1,0 +1,403 @@
+// Cashcast — database schema (S6)
+//
+// ⚠️ Derived from the DDL in SPEC.md §3 S6, which SPEC itself marks as
+// reconstructed from field references rather than the original document.
+// This file must be reconciled with a human before the first migration is
+// applied (foundation task 1.5). Do not run `prisma migrate deploy` against a
+// shared database until that review is signed off.
+//
+// Data rules (SPEC §3 S6):
+//   - money is always Decimal(12,2); Float/Real is forbidden
+//   - all timestamps are timestamptz
+//   - amounts are always positive; direction is carried by type/direction
+//   - is_transfer rows are excluded from spend stats and forecasting
+//   - any ai-produced row must also carry a confidence value
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Core ────────────────────────────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(uuid()) @db.Uuid
+  lineUserId     String   @unique @map("line_user_id")
+  displayName    String?  @map("display_name")
+  timezone       String   @default("Asia/Bangkok")
+  initialBalance Decimal  @default(0) @map("initial_balance") @db.Decimal(12, 2)
+  currentBalance Decimal  @default(0) @map("current_balance") @db.Decimal(12, 2)
+  // SEC-16: AI is opt-in per user and disableable at any time.
+  aiEnabled      Boolean  @default(false) @map("ai_enabled")
+  notifyEnabled  Boolean  @default(false) @map("notify_enabled")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  categories        Category[]
+  transactions      Transaction[]
+  recurringRules    RecurringRule[]
+  budgets           Budget[]
+  keywordMap        UserKeywordMap[]
+  forecastSnapshots ForecastSnapshot[]
+  notifications     NotificationLog[]
+  ingestTokens      IngestToken[]
+  rawEmails         RawEmail[]
+  bankTransactions  BankTransaction[]
+  aiUsageLogs       AiUsageLog[]
+
+  @@map("users")
+}
+
+model Category {
+  id       String       @id @default(uuid()) @db.Uuid
+  /// null = system category shared by every user
+  userId   String?      @map("user_id") @db.Uuid
+  name     String
+  type     CategoryType
+  icon     String?
+  isSystem Boolean      @default(false) @map("is_system")
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user               User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions       Transaction[]
+  recurringRules     RecurringRule[]
+  budgets            Budget[]
+  keywordMap         UserKeywordMap[]
+  merchantDictionary MerchantDictionary[]
+
+  @@map("categories")
+}
+
+model Transaction {
+  id          String            @id @default(uuid()) @db.Uuid
+  userId      String            @map("user_id") @db.Uuid
+  categoryId  String?           @map("category_id") @db.Uuid
+  /// always positive — direction is carried by `type`
+  amount      Decimal           @db.Decimal(12, 2)
+  type        CategoryType
+  occurredAt  DateTime          @map("occurred_at") @db.Timestamptz(6)
+  note        String?           @db.VarChar(500)
+  source      TransactionSource @default(manual)
+  parsedBy    ParsedBy?         @map("parsed_by")
+  /// required whenever parsedBy = ai
+  confidence  Decimal?          @db.Decimal(3, 2)
+  isTransfer  Boolean           @default(false) @map("is_transfer")
+  isAuto      Boolean           @default(false) @map("is_auto")
+  status      TransactionStatus @default(confirmed)
+  deletedAt   DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category         Category?         @relation(fields: [categoryId], references: [id])
+  matchedBankTxns  BankTransaction[]
+
+  @@index([userId, occurredAt(sort: Desc)], map: "idx_txn_user_date")
+  @@index([userId, categoryId], map: "idx_txn_user_category")
+  @@index([userId, status], map: "idx_txn_user_status")
+  @@map("transactions")
+}
+
+model RecurringRule {
+  id         String       @id @default(uuid()) @db.Uuid
+  userId     String       @map("user_id") @db.Uuid
+  categoryId String?      @map("category_id") @db.Uuid
+  label      String
+  amount     Decimal      @db.Decimal(12, 2)
+  type       CategoryType
+  frequency  Frequency
+  dayOfMonth Int?         @map("day_of_month") @db.SmallInt
+  dayOfWeek  Int?         @map("day_of_week") @db.SmallInt
+  startDate  DateTime     @map("start_date") @db.Date
+  endDate    DateTime?    @map("end_date") @db.Date
+  isActive   Boolean      @default(true) @map("is_active")
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@index([userId, isActive], map: "idx_recurring_active")
+  @@map("recurring_rules")
+}
+
+model Budget {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  categoryId  String   @map("category_id") @db.Uuid
+  /// first day of the month
+  periodMonth DateTime @map("period_month") @db.Date
+  limitAmount Decimal  @map("limit_amount") @db.Decimal(12, 2)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, categoryId, periodMonth])
+  @@map("budgets")
+}
+
+model UserKeywordMap {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  keyword    String
+  categoryId String   @map("category_id") @db.Uuid
+  hitCount   Int      @default(1) @map("hit_count")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, keyword])
+  @@index([userId, keyword], map: "idx_keyword_lookup")
+  @@map("user_keyword_map")
+}
+
+model ForecastSnapshot {
+  id                   String     @id @default(uuid()) @db.Uuid
+  userId               String     @map("user_id") @db.Uuid
+  computedAt           DateTime   @default(now()) @map("computed_at") @db.Timestamptz(6)
+  methodVersion        String     @map("method_version")
+  level                Int        @db.SmallInt
+  balanceNow           Decimal    @map("balance_now") @db.Decimal(12, 2)
+  projectedEoyBalance  Decimal    @map("projected_eoy_balance") @db.Decimal(12, 2)
+  runwayDate           DateTime?  @map("runway_date") @db.Date
+  shortfallProbability Decimal?   @map("shortfall_probability") @db.Decimal(4, 3)
+  confidence           Confidence
+  inputs               Json
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, computedAt(sort: Desc)], map: "idx_forecast_user_time")
+  @@map("forecast_snapshots")
+}
+
+/// LINE webhookEventId — persisted for idempotency (SPEC §3 S1)
+model WebhookEvent {
+  id         String   @id
+  receivedAt DateTime @default(now()) @map("received_at") @db.Timestamptz(6)
+
+  @@map("webhook_events")
+}
+
+model NotificationLog {
+  id     String              @id @default(uuid()) @db.Uuid
+  userId String              @map("user_id") @db.Uuid
+  kind   String
+  channel NotificationChannel
+  sentAt DateTime            @default(now()) @map("sent_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_log")
+}
+
+// ─── Email ingestion (S8/S9) ─────────────────────────────────────────────────
+
+model IngestToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  /// SEC-7: >= 32 random bytes, never derived from user_id
+  token     String    @unique
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ingest_tokens")
+}
+
+model RawEmail {
+  id           String         @id @default(uuid()) @db.Uuid
+  userId       String         @map("user_id") @db.Uuid
+  /// idempotency key
+  messageHash  String         @unique @map("message_hash")
+  sender       String
+  subject      String?
+  bodyText     String         @map("body_text")
+  receivedAt   DateTime       @map("received_at") @db.Timestamptz(6)
+  /// SEC-6
+  spfPass      Boolean        @map("spf_pass")
+  dkimPass     Boolean        @map("dkim_pass")
+  status       RawEmailStatus @default(pending)
+  aiAttempted  Boolean        @default(false) @map("ai_attempted")
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankTransactions BankTransaction[]
+
+  @@index([userId, receivedAt(sort: Desc)], map: "idx_raw_email_user")
+  @@index([status], map: "idx_raw_email_status")
+  @@map("raw_emails")
+}
+
+model BankTransaction {
+  id                   String                @id @default(uuid()) @db.Uuid
+  userId               String                @map("user_id") @db.Uuid
+  rawEmailId           String                @map("raw_email_id") @db.Uuid
+  bankCode             String                @map("bank_code")
+  parserVersion        String?               @map("parser_version")
+  amount               Decimal               @db.Decimal(12, 2)
+  direction            Direction
+  occurredAt           DateTime              @map("occurred_at") @db.Timestamptz(6)
+  merchantRaw          String?               @map("merchant_raw")
+  /// normalized by S11 Task 2
+  merchantClean        String?               @map("merchant_clean")
+  balanceAfter         Decimal?              @map("balance_after") @db.Decimal(12, 2)
+  bankRef              String?               @map("bank_ref")
+  extractedBy          ExtractedBy           @map("extracted_by")
+  /// required whenever extractedBy = ai
+  confidence           Decimal?              @db.Decimal(3, 2)
+  /// AI-extracted rows always land as pending and need human confirmation
+  status               BankTransactionStatus @default(pending)
+  matchedTransactionId String?               @map("matched_transaction_id") @db.Uuid
+  isTransfer           Boolean               @default(false) @map("is_transfer")
+  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rawEmail           RawEmail     @relation(fields: [rawEmailId], references: [id], onDelete: Cascade)
+  matchedTransaction Transaction? @relation(fields: [matchedTransactionId], references: [id])
+
+  @@index([userId, occurredAt(sort: Desc)], map: "idx_bank_txn_user_date")
+  @@index([userId, status], map: "idx_bank_txn_status")
+  @@index([userId, bankRef], map: "idx_bank_txn_ref")
+  @@map("bank_transactions")
+}
+
+// ─── AI service (S11) ────────────────────────────────────────────────────────
+
+model AiCache {
+  /// hash(task + normalized input)
+  cacheKey  String   @id @map("cache_key")
+  task      AiTask
+  result    Json
+  hitCount  Int      @default(0) @map("hit_count")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+
+  @@index([expiresAt], map: "idx_ai_cache_expiry")
+  @@map("ai_cache")
+}
+
+model AiUsageLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String?  @map("user_id") @db.Uuid
+  task         AiTask
+  provider     String?
+  model        String?
+  cacheHit     Boolean  @default(false) @map("cache_hit")
+  promptTokens Int?     @map("prompt_tokens")
+  outputTokens Int?     @map("output_tokens")
+  costThb      Decimal  @default(0) @map("cost_thb") @db.Decimal(12, 4)
+  latencyMs    Int?     @map("latency_ms")
+  success      Boolean
+  errorCode    String?  @map("error_code")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)], map: "idx_ai_usage_time")
+  @@index([userId, createdAt(sort: Desc)], map: "idx_ai_usage_user_day")
+  @@map("ai_usage_log")
+}
+
+/// Global — one AI call benefits every user forever (SPEC §3.11.2 T2)
+model MerchantDictionary {
+  id            String               @id @default(uuid()) @db.Uuid
+  /// normalized POS code
+  merchantRaw   String               @unique @map("merchant_raw")
+  merchantClean String               @map("merchant_clean")
+  categoryId    String?              @map("category_id") @db.Uuid
+  confidence    Decimal              @db.Decimal(3, 2)
+  source        MerchantEntrySource  @default(ai)
+  hitCount      Int                  @default(1) @map("hit_count")
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("merchant_dictionary")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum CategoryType {
+  income
+  expense
+}
+
+enum TransactionSource {
+  manual
+  line
+  email
+  recurring
+}
+
+enum ParsedBy {
+  regex
+  dictionary
+  learned
+  ai
+}
+
+enum TransactionStatus {
+  pending
+  confirmed
+}
+
+enum Frequency {
+  weekly
+  monthly
+  yearly
+}
+
+enum Confidence {
+  low
+  medium
+  high
+}
+
+enum NotificationChannel {
+  reply
+  push
+}
+
+enum RawEmailStatus {
+  pending
+  parsed_rule
+  parsed_ai
+  failed
+}
+
+enum Direction {
+  in
+  out
+}
+
+enum ExtractedBy {
+  regex
+  ai
+}
+
+enum BankTransactionStatus {
+  pending
+  confirmed
+  merged
+  failed
+}
+
+enum AiTask {
+  T1
+  T2
+  T3
+  T4
+}
+
+enum MerchantEntrySource {
+  ai
+  manual
+}

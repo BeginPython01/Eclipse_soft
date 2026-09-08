@@ -1,0 +1,93 @@
+{
+  "root": true,
+  "extends": ["next/core-web-vitals", "eslint-config-prettier"],
+  "rules": {
+    "eqeqeq": ["error", "always"],
+    "no-console": [
+      "warn",
+      {
+        "allow": ["warn", "error"]
+      }
+    ],
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "CatchClause[param=undefined]",
+        "message": "Catch the error and log it (AIDO \u00a714) \u2014 never `catch {}`."
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "openai",
+              "@anthropic-ai/*",
+              "@google/generative-ai",
+              "@google/genai",
+              "@mistralai/*",
+              "cohere-ai",
+              "groq-sdk",
+              "ollama",
+              "replicate",
+              "together-ai",
+              "@aws-sdk/client-bedrock*",
+              "langchain",
+              "langchain/*",
+              "@langchain/*",
+              "ai",
+              "ai/*"
+            ],
+            "message": "AI provider SDKs may only be imported inside src/modules/ai/ (S11). Route the call through the AI service \u2014 see AIDO \u00a74 and SPEC \u00a73.11."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/modules/ai/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["src/modules/forecast/**/*.ts", "src/modules/reconcile/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "openai",
+                  "@anthropic-ai/*",
+                  "@google/generative-ai",
+                  "@google/genai",
+                  "@mistralai/*",
+                  "cohere-ai",
+                  "groq-sdk",
+                  "ollama",
+                  "replicate",
+                  "together-ai",
+                  "@aws-sdk/client-bedrock*",
+                  "langchain",
+                  "langchain/*",
+                  "@langchain/*",
+                  "ai",
+                  "ai/*"
+                ],
+                "message": "AI provider SDKs may only be imported inside src/modules/ai/ (S11). Route the call through the AI service \u2014 see AIDO \u00a74 and SPEC \u00a73.11."
+              },
+              {
+                "group": ["**/modules/ai", "**/modules/ai/**", "@/modules/ai", "@/modules/ai/**"],
+                "message": "\ud83d\udd34 AI-free zone (SPEC \u00a73 S5/S10, AIDO \u00a76). This module must never import the AI service \u2014 every number here is deterministic."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
