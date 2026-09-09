@@ -1,0 +1,470 @@
+// จดตัง (Jodtang) — database schema (S6)
+//
+// Derived from SPEC.md §S6, which marks its own DDL as reconstructed.
+// ⚠️ Open decision D5: the S6 owner must review this table by table before the
+//    first migration is applied.
+//
+// Non-negotiable (AIDO §5.1, §5.4):
+//   • money  → Decimal @db.Decimal(12, 2). Never Float, never JS number.
+//   • time   → DateTime @db.Timestamptz(6). Never a naive timestamp.
+//   • amount → always positive; direction lives in `type` / `direction`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TxnType {
+  income
+  expense
+}
+
+enum TxnSource {
+  manual
+  line
+  email
+  recurring
+}
+
+enum ParsedBy {
+  regex
+  dictionary
+  learned
+  ai
+}
+
+enum TxnStatus {
+  pending
+  confirmed
+}
+
+enum Frequency {
+  weekly
+  monthly
+  yearly
+}
+
+enum Direction {
+  in
+  out
+}
+
+enum ExtractedBy {
+  regex
+  ai
+}
+
+enum BankTxnStatus {
+  pending
+  confirmed
+  merged
+  failed
+}
+
+enum RawEmailStatus {
+  pending
+  parsed_rule
+  parsed_ai
+  failed
+}
+
+enum Confidence {
+  low
+  medium
+  high
+}
+
+enum NotificationChannel {
+  reply
+  push
+}
+
+enum MerchantSource {
+  ai
+  manual
+}
+
+model User {
+  id         String @id @default(uuid()) @db.Uuid
+  lineUserId String @unique @map("line_user_id")
+
+  displayName String? @map("display_name")
+  timezone    String  @default("Asia/Bangkok")
+
+  initialBalance Decimal @default(0) @map("initial_balance") @db.Decimal(12, 2)
+
+  /// Read cache, not a source of truth. The ledger is authoritative:
+  /// B = initialBalance + Σ income − Σ expense over non-deleted rows.
+  /// Every mutation recomputes that sum in full and OVERWRITES this column
+  /// inside the same DB transaction. `balance = balance + amount` is forbidden
+  /// (AIDO §5.1 M3) — one missed rollback and it drifts silently, forever.
+  /// Only src/modules/transaction/ may write it.
+  currentBalance Decimal @default(0) @map("current_balance") @db.Decimal(12, 2)
+
+  /// Minimum balance floor for Level 1.5 safe-to-spend (SPEC §S5).
+  dailySpendBuffer Decimal @default(0) @map("daily_spend_buffer") @db.Decimal(12, 2)
+
+  aiEnabled     Boolean @default(false) @map("ai_enabled")
+  notifyEnabled Boolean @default(false) @map("notify_enabled")
+  isActive      Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  categories        Category[]
+  transactions      Transaction[]
+  recurringRules    RecurringRule[]
+  budgets           Budget[]
+  keywordMap        UserKeywordMap[]
+  forecastSnapshots ForecastSnapshot[]
+  notifications     NotificationLog[]
+  ingestTokens      IngestToken[]
+  rawEmails         RawEmail[]
+  bankTransactions  BankTransaction[]
+  aiUsageLogs       AiUsageLog[]
+
+  @@map("users")
+}
+
+model Category {
+  /// NULL userId = system category shared by everyone.
+  id       String  @id @default(uuid()) @db.Uuid
+  userId   String? @map("user_id") @db.Uuid
+  name     String
+  type     TxnType
+  icon     String?
+  isSystem Boolean @default(false) @map("is_system")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user           User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+  recurringRules RecurringRule[]
+  budgets        Budget[]
+  keywordMap     UserKeywordMap[]
+  merchants      MerchantDictionary[]
+
+  @@index([userId])
+  @@map("categories")
+}
+
+model Transaction {
+  id         String  @id @default(uuid()) @db.Uuid
+  userId     String  @map("user_id") @db.Uuid
+  categoryId String? @map("category_id") @db.Uuid
+
+  /// Always > 0 (DB CHECK added in migration). Direction is carried by `type`.
+  amount Decimal @db.Decimal(12, 2)
+  type   TxnType
+
+  occurredAt DateTime @map("occurred_at") @db.Timestamptz(6)
+  note       String?  @db.VarChar(500)
+
+  source TxnSource @default(manual)
+
+  /// AIDO §5.4 D6: rows with parsedBy = ai MUST carry a confidence value.
+  parsedBy   ParsedBy?
+  confidence Decimal?  @db.Decimal(3, 2)
+
+  /// AIDO §5.1 M5: transfers are excluded from spend stats and forecasting.
+  isTransfer Boolean @default(false) @map("is_transfer")
+  isAuto     Boolean @default(false) @map("is_auto")
+
+  /// AI-derived rows are ALWAYS pending until a human confirms (AIDO §5.2 A3).
+  status TxnStatus @default(confirmed)
+
+  /// AIDO §5.4 D3: soft delete. Hard delete only on account deletion.
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category         Category?         @relation(fields: [categoryId], references: [id])
+  bankTransactions BankTransaction[]
+
+  @@index([userId, occurredAt(sort: Desc)])
+  @@index([userId, categoryId])
+  @@index([userId, status])
+  @@map("transactions")
+}
+
+model RecurringRule {
+  id         String  @id @default(uuid()) @db.Uuid
+  userId     String  @map("user_id") @db.Uuid
+  categoryId String? @map("category_id") @db.Uuid
+
+  label  String
+  amount Decimal @db.Decimal(12, 2)
+  type   TxnType
+
+  frequency  Frequency
+  dayOfMonth Int?      @map("day_of_month") @db.SmallInt
+  dayOfWeek  Int?      @map("day_of_week") @db.SmallInt
+
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+  isActive  Boolean   @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@index([userId, isActive])
+  @@map("recurring_rules")
+}
+
+model Budget {
+  id         String @id @default(uuid()) @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+
+  /// First day of the month the budget applies to.
+  periodMonth DateTime @map("period_month") @db.Date
+  limitAmount Decimal  @map("limit_amount") @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, categoryId, periodMonth])
+  @@map("budgets")
+}
+
+model UserKeywordMap {
+  /// The S4 self-learning loop: a confirmed correction lands here and takes
+  /// precedence thereafter, so the same phrase never reaches L4 (AI) twice.
+  id         String @id @default(uuid()) @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  keyword    String
+  categoryId String @map("category_id") @db.Uuid
+  hitCount   Int    @default(1) @map("hit_count")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, keyword])
+  @@index([userId, keyword])
+  @@map("user_keyword_map")
+}
+
+model ForecastSnapshot {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  computedAt DateTime @default(now()) @map("computed_at") @db.Timestamptz(6)
+
+  /// Bump on ANY formula change (AIDO §11.3), so historical snapshots stay
+  /// interpretable and the determinism test can pin a version.
+  methodVersion String @map("method_version")
+  level         Int    @db.SmallInt
+
+  balanceNow          Decimal @map("balance_now") @db.Decimal(12, 2)
+  projectedEomBalance Decimal @map("projected_eom_balance") @db.Decimal(12, 2)
+  dailySafeToSpend    Decimal @map("daily_safe_to_spend") @db.Decimal(12, 2)
+
+  runwayDate           DateTime?  @map("runway_date") @db.Date
+  shortfallProbability Decimal?   @map("shortfall_probability") @db.Decimal(4, 3)
+  confidence           Confidence
+
+  /// The exact inputs the figures were computed from — this is what makes a
+  /// past forecast reproducible and auditable.
+  inputs Json
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, computedAt(sort: Desc)])
+  @@map("forecast_snapshots")
+}
+
+model WebhookEvent {
+  /// LINE webhookEventId. Presence here means "already handled" — LINE retries
+  /// and the gateway must be idempotent (SPEC §S1).
+  id         String   @id
+  receivedAt DateTime @default(now()) @map("received_at") @db.Timestamptz(6)
+
+  @@map("webhook_events")
+}
+
+model NotificationLog {
+  id      String              @id @default(uuid()) @db.Uuid
+  userId  String              @map("user_id") @db.Uuid
+  kind    String
+  /// Reply is free, Push is quota'd — this is what the quota counter reads.
+  channel NotificationChannel
+
+  sentAt DateTime @default(now()) @map("sent_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sentAt(sort: Desc)])
+  @@map("notification_log")
+}
+
+model IngestToken {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  /// SEC-7: >= 32 cryptographically random bytes. NEVER derived from userId —
+  /// a guessable token lets anyone inject fabricated transactions.
+  token String @unique
+
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("ingest_tokens")
+}
+
+model RawEmail {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  /// Idempotency key — the same forwarded mail must never create two rows.
+  messageHash String @unique @map("message_hash")
+
+  sender     String
+  subject    String?
+  /// AIDO §5.4 D4: persisted BEFORE parsing, so a K PLUS template change can be
+  /// re-parsed later instead of silently losing the transaction.
+  bodyText   String   @map("body_text")
+  receivedAt DateTime @map("received_at") @db.Timestamptz(6)
+
+  /// SEC-6: reject on failure. Without this, anyone who learns the ingest
+  /// address can post fake bank mail.
+  spfPass  Boolean @map("spf_pass")
+  dkimPass Boolean @map("dkim_pass")
+
+  status RawEmailStatus @default(pending)
+
+  /// One AI attempt per email, ever (SPEC §S9 cost control).
+  aiAttempted Boolean @default(false) @map("ai_attempted")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankTransactions BankTransaction[]
+
+  @@index([userId, receivedAt(sort: Desc)])
+  @@index([status])
+  @@map("raw_emails")
+}
+
+model BankTransaction {
+  id         String @id @default(uuid()) @db.Uuid
+  userId     String @map("user_id") @db.Uuid
+  rawEmailId String @map("raw_email_id") @db.Uuid
+
+  bankCode      String  @map("bank_code")
+  /// Which parser version produced this row — needed to re-parse selectively
+  /// after a rule update.
+  parserVersion String? @map("parser_version")
+
+  amount     Decimal   @db.Decimal(12, 2)
+  direction  Direction
+  occurredAt DateTime  @map("occurred_at") @db.Timestamptz(6)
+
+  merchantRaw   String? @map("merchant_raw")
+  /// Filled by S11 T2 normalizeMerchant via the global merchant dictionary.
+  merchantClean String? @map("merchant_clean")
+
+  balanceAfter Decimal? @map("balance_after") @db.Decimal(12, 2)
+  /// Preferred dedup key when the bank provides one.
+  bankRef      String?  @map("bank_ref")
+
+  extractedBy ExtractedBy @map("extracted_by")
+  confidence  Decimal?    @db.Decimal(3, 2)
+
+  /// AI-extracted rows are ALWAYS pending, whatever confidence they report —
+  /// the primary defense against a hallucination corrupting the ledger.
+  status BankTxnStatus @default(pending)
+
+  matchedTransactionId String? @map("matched_transaction_id") @db.Uuid
+  isTransfer           Boolean @default(false) @map("is_transfer")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rawEmail          RawEmail     @relation(fields: [rawEmailId], references: [id], onDelete: Cascade)
+  matchedTransaction Transaction? @relation(fields: [matchedTransactionId], references: [id])
+
+  @@index([userId, occurredAt(sort: Desc)])
+  @@index([userId, status])
+  @@index([userId, bankRef])
+  @@map("bank_transactions")
+}
+
+model AiCache {
+  /// hash(task + normalized input). Checked before EVERY provider call
+  /// (AIDO §5.2 A8) — this is what keeps the monthly bill under ฿80.
+  cacheKey String @id @map("cache_key")
+  task     String
+  result   Json
+  hitCount Int    @default(0) @map("hit_count")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+
+  @@index([expiresAt])
+  @@map("ai_cache")
+}
+
+model AiUsageLog {
+  id     String  @id @default(uuid()) @db.Uuid
+  /// SET NULL rather than cascade: cost history must survive account deletion,
+  /// since it is what the budget breaker sums.
+  userId String? @map("user_id") @db.Uuid
+
+  task     String
+  provider String?
+  model    String?
+
+  /// Cache hits are logged too — otherwise the hit rate is unmeasurable.
+  cacheHit Boolean @default(false) @map("cache_hit")
+
+  promptTokens Int? @map("prompt_tokens")
+  outputTokens Int? @map("output_tokens")
+
+  costThb   Decimal @default(0) @map("cost_thb") @db.Decimal(12, 4)
+  latencyMs Int?    @map("latency_ms")
+
+  success   Boolean
+  errorCode String? @map("error_code")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("ai_usage_log")
+}
+
+model MerchantDictionary {
+  /// Global, not per-user: one T2 call benefits every user forever. This is
+  /// why T2 is the highest-ROI AI task in the system.
+  id            String  @id @default(uuid()) @db.Uuid
+  merchantRaw   String  @unique @map("merchant_raw")
+  merchantClean String  @map("merchant_clean")
+  categoryId    String? @map("category_id") @db.Uuid
+
+  confidence Decimal        @db.Decimal(3, 2)
+  source     MerchantSource @default(ai)
+  hitCount   Int            @default(1) @map("hit_count")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("merchant_dictionary")
+}

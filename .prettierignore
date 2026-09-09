@@ -1,0 +1,9 @@
+.next
+node_modules
+coverage
+prisma/migrations
+
+# The team's authored documents. Prettier renormalizes every markdown table in
+# them, which buries real edits under hundreds of whitespace-only lines.
+SPEC.md
+AIDO.md

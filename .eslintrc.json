@@ -1,0 +1,64 @@
+{
+  "root": true,
+  "extends": [
+    "next/core-web-vitals",
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
+  ],
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "error",
+    "eqeqeq": ["error", "always"],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@anthropic-ai/*", "openai", "openai/*"],
+            "message": "AIDO §5.2 A7: every model call goes through src/modules/ai/. No other module may import a provider SDK directly."
+          }
+        ]
+      }
+    ],
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "Math",
+        "property": "random",
+        "message": "AIDO §11.3: forecast output must be reproducible. Monte Carlo (S5 L3) uses a seeded generator in the Python service, not Math.random."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/modules/forecast/**/*.ts", "src/modules/reconcile/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/modules/ai",
+                  "**/modules/ai/**",
+                  "@/modules/ai",
+                  "@/modules/ai/**"
+                ],
+                "message": "AIDO §6: this module is an AI-Free Zone. Identical inputs must always yield identical outputs — importing the AI service here breaks that guarantee."
+              },
+              {
+                "group": ["@anthropic-ai/*", "openai", "openai/*"],
+                "message": "AIDO §6: AI-Free Zone. Never."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/modules/ai/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
+}
