@@ -1,6 +1,6 @@
 # Cashcast
 
-> **"Will my money last until the end of the year?"**
+> **"Will my money last until the end of the month?"**
 
 A personal finance app that answers exactly one question. Log expenses in three
 seconds through LINE chat (`กาแฟ 80`) or let K PLUS bank emails flow in
