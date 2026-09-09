@@ -361,5 +361,5 @@ review.
 
 | File | Purpose |
 |---|---|
-| [SPEC.md](SPEC.md) | Source of truth — modules, schema, security, roadmap |
-| [AIDO.md](AIDO.md) | Operating manual — rulebook, conventions, playbooks |
+| [SPEC(2).md](SPEC(2).md) | Source of truth — modules, schema, security, roadmap |
+| [AIDO(2).md](AIDO(2).md) | Operating manual — rulebook, conventions, playbooks |
