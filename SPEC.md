@@ -2,7 +2,7 @@
 
 ## 1. Project Overview
 
-**Project Name:** (TBD — working title: "Cashcast")
+**Project Name:** จดตัง (Jodtang)
 **Type:** Experimental / educational project (non-commercial)
 **Team Size:** 5 developers
 **Budget:** ~100 THB/month (free-tier first; AI spend hard-capped)
@@ -16,7 +16,7 @@
 Most personal finance apps fail for two reasons:
 
 1. **Manual entry fatigue** — users abandon logging within 2–3 weeks.
-2. **Backward-looking only** — they show where money *went*, not whether money *will last*.
+2. **Backward-looking only** — they show where money _went_, not whether money _will last_.
 
 ### 1.2 Product Thesis
 
@@ -45,10 +45,10 @@ Three pillars support it:
 
 ### 2.1 Hybrid Model
 
-| Surface | Responsibility | Rationale |
-|---|---|---|
-| LINE Bot | Fast capture, quick summary, notifications | User already lives in LINE; 3-second logging |
-| Web App (browser) | Dashboard, charts, simulation, settings | Full screen, real DevTools, complex UI |
+| Surface           | Responsibility                             | Rationale                                    |
+| ----------------- | ------------------------------------------ | -------------------------------------------- |
+| LINE Bot          | Fast capture, quick summary, notifications | User already lives in LINE; 3-second logging |
+| Web App (browser) | Dashboard, charts, simulation, settings    | Full screen, real DevTools, complex UI       |
 
 Both surfaces share **one backend, one database, one identity** (`line_user_id`).
 
@@ -98,20 +98,20 @@ Both surfaces share **one backend, one database, one identity** (`line_user_id`)
 
 ### 2.3 Technology Stack
 
-| Layer | Technology | Cost |
-|---|---|---|
-| Frontend | Next.js 14 (App Router) + TypeScript + Tailwind + Recharts | Free (Vercel Hobby) |
-| Backend | Next.js Route Handlers (monolith) | Free |
-| Database | PostgreSQL (Supabase / Neon) | Free tier |
-| ORM | Prisma | Free |
-| Bot | LINE Messaging API SDK (Node) | Free (reply-only) |
-| Auth | LINE Login v2.1 (OAuth 2.0 + OIDC) | Free |
-| Email Ingest | Cloudflare Email Routing → Worker | Free |
-| 🆕 AI | Provider-agnostic adapter (small/cheap model) | Hard-capped ≤ 80 THB/mo |
-| 🆕 Schema validation | Zod | Free |
-| Forecast (heavy) | Python + FastAPI + NumPy (Monte Carlo only) | Free |
-| Cron | Vercel Cron / GitHub Actions | Free |
-| Monitoring | Sentry (free tier) | Free |
+| Layer                | Technology                                                 | Cost                    |
+| -------------------- | ---------------------------------------------------------- | ----------------------- |
+| Frontend             | Next.js 14 (App Router) + TypeScript + Tailwind + Recharts | Free (Vercel Hobby)     |
+| Backend              | Next.js Route Handlers (monolith)                          | Free                    |
+| Database             | PostgreSQL (Supabase / Neon)                               | Free tier               |
+| ORM                  | Prisma                                                     | Free                    |
+| Bot                  | LINE Messaging API SDK (Node)                              | Free (reply-only)       |
+| Auth                 | LINE Login v2.1 (OAuth 2.0 + OIDC)                         | Free                    |
+| Email Ingest         | Cloudflare Email Routing → Worker                          | Free                    |
+| 🆕 AI                | Provider-agnostic adapter (small/cheap model)              | Hard-capped ≤ 80 THB/mo |
+| 🆕 Schema validation | Zod                                                        | Free                    |
+| Forecast (heavy)     | Python + FastAPI + NumPy (Monte Carlo only)                | Free                    |
+| Cron                 | Vercel Cron / GitHub Actions                               | Free                    |
+| Monitoring           | Sentry (free tier)                                         | Free                    |
 
 **Language policy:** TypeScript by default. Python only for Monte Carlo (S5-L3).
 🆕 **AI policy:** No SDK lock-in. All model calls go through a single provider adapter so the model can be swapped — or disabled entirely — via environment variables.
@@ -131,45 +131,45 @@ Both surfaces share **one backend, one database, one identity** (`line_user_id`)
 - MUST be idempotent — persist `webhookEventId`, ignore duplicates.
 - MUST prefer Reply API over Push (Reply is free).
 
-| Event | Behavior |
-|---|---|
-| `follow` | Create user, send onboarding + web link |
+| Event          | Behavior                                        |
+| -------------- | ----------------------------------------------- |
+| `follow`       | Create user, send onboarding + web link         |
 | `message.text` | Route to S4 → persist → reply Flex confirmation |
-| `postback` | Category correction, confirm, delete |
-| `unfollow` | `is_active = false` (never delete data) |
+| `postback`     | Category correction, confirm, delete            |
+| `unfollow`     | `is_active = false` (never delete data)         |
 
 🆕 **AI latency handling:** If S4 escalates to S11 (L4), the gateway MUST send an immediate optimistic reply (`⏳ กำลังบันทึก...`) using the reply token, then Push the final result. Reply tokens expire in ~1 minute and cannot wait on AI latency.
 
-🆕 **`เหลือ` AI narration path:** S5 (deterministic) computes the balance/forecast numbers first — this MUST always succeed within the reply-token window. Only the *narration* step (T4, turning the numbers into natural Thai text) goes through S11. If T4 returns within budget, reply with the AI-narrated text; on cache miss taking too long, rate-limit hit, budget breaker trip, or `AI_ENABLED=false`, the gateway MUST fall back to the plain deterministic Flex message (numbers only, no narration) within the same reply — never block or Push for this command. The number itself is never delayed or altered by AI.
+🆕 **`เหลือ` AI narration path:** S5 (deterministic) computes the balance/forecast numbers first — this MUST always succeed within the reply-token window. Only the _narration_ step (T4, turning the numbers into natural Thai text) goes through S11. If T4 returns within budget, reply with the AI-narrated text; on cache miss taking too long, rate-limit hit, budget breaker trip, or `AI_ENABLED=false`, the gateway MUST fall back to the plain deterministic Flex message (numbers only, no narration) within the same reply — never block or Push for this command. The number itself is never delayed or altered by AI.
 
 **Chat commands:**
 
-| Input | Action |
-|---|---|
-| `กาแฟ 80` | Log expense |
-| `+เงินเดือน 35000` | Log income |
-| `สรุป` | Monthly summary Flex |
-| `เหลือ` | Balance + EOM forecast + 🆕 daily safe-to-spend, 🆕 narrated via AI T4 when `AI_ENABLED=true` |
-| 🆕 `วิเคราะห์` | AI-generated insight (rate-limited) |
-| `ช่วยเหลือ` | Usage guide |
+| Input              | Action                                                                                        |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| `กาแฟ 80`          | Log expense                                                                                   |
+| `+เงินเดือน 35000` | Log income                                                                                    |
+| `สรุป`             | Monthly summary Flex                                                                          |
+| `เหลือ`            | Balance + EOM forecast + 🆕 daily safe-to-spend, 🆕 narrated via AI T4 when `AI_ENABLED=true` |
+| 🆕 `วิเคราะห์`     | AI-generated insight (rate-limited)                                                           |
+| `ช่วยเหลือ`        | Usage guide                                                                                   |
 
 ---
 
 ### S2 — Web Frontend
 
-| Route | Purpose | Priority |
-|---|---|---|
-| `/` | Landing + "Login with LINE" | P0 |
-| `/onboarding` | Initial balance, recurring setup | P0 |
-| `/dashboard` | Balance card, forecast card (incl. 🆕 daily safe-to-spend), charts | P0 |
-| `/transactions` | List, filter, search, edit, delete | P0 |
-| `/transactions/new` | Detailed entry form | P0 |
-| `/recurring` | Manage recurring rules | P0 |
-| `/budgets` | Category budgets + progress | P1 |
-| `/pending` | Review unconfirmed bank transactions | P1 |
-| 🆕 `/insights` | AI insight cards + history | P2 |
-| `/simulate` | What-if slider simulator | P2 |
-| `/settings` | Timezone, notifications, email source, AI toggle, 🆕 daily-spend buffer, export, delete | P1 |
+| Route               | Purpose                                                                                 | Priority |
+| ------------------- | --------------------------------------------------------------------------------------- | -------- |
+| `/`                 | Landing + "Login with LINE"                                                             | P0       |
+| `/onboarding`       | Initial balance, recurring setup                                                        | P0       |
+| `/dashboard`        | Balance card, forecast card (incl. 🆕 daily safe-to-spend), charts                      | P0       |
+| `/transactions`     | List, filter, search, edit, delete                                                      | P0       |
+| `/transactions/new` | Detailed entry form                                                                     | P0       |
+| `/recurring`        | Manage recurring rules                                                                  | P0       |
+| `/budgets`          | Category budgets + progress                                                             | P1       |
+| `/pending`          | Review unconfirmed bank transactions                                                    | P1       |
+| 🆕 `/insights`      | AI insight cards + history                                                              | P2       |
+| `/simulate`         | What-if slider simulator                                                                | P2       |
+| `/settings`         | Timezone, notifications, email source, AI toggle, 🆕 daily-spend buffer, export, delete | P1       |
 
 **Constraints:**
 
@@ -205,13 +205,13 @@ MUST NOT store tokens in localStorage. MUST NOT trust client-supplied `userId`.
 
 #### S3.2 Transaction Module
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/transactions` | List (pagination, `from`, `to`, `categoryId`, `q`) |
-| POST | `/api/transactions` | Create |
-| PATCH | `/api/transactions/:id` | Update |
-| DELETE | `/api/transactions/:id` | Soft delete |
-| GET | `/api/transactions/export` | CSV / JSON |
+| Method | Path                       | Description                                        |
+| ------ | -------------------------- | -------------------------------------------------- |
+| GET    | `/api/transactions`        | List (pagination, `from`, `to`, `categoryId`, `q`) |
+| POST   | `/api/transactions`        | Create                                             |
+| PATCH  | `/api/transactions/:id`    | Update                                             |
+| DELETE | `/api/transactions/:id`    | Soft delete                                        |
+| GET    | `/api/transactions/export` | CSV / JSON                                         |
 
 **Validation:** `amount > 0`; `occurred_at ≤ now + 1 day`; `note ≤ 500` chars; all balance mutations inside a DB transaction.
 
@@ -241,12 +241,12 @@ Recomputed on every mutation — **never incrementally patched**.
 
 Four-layer cascade, ordered by cost:
 
-| Layer | Method | Coverage | Cost | Owner |
-|---|---|---|---|---|
-| L1 | Regex (amount + sign) | ~60% | Free | S4 |
-| L2 | Thai keyword dictionary | +25% | Free | S4 |
-| L3 | Per-user learned dictionary | +10% | Free | S4 |
-| 🆕 L4 | AI fallback | ~5% | Paid | S11 |
+| Layer | Method                      | Coverage | Cost | Owner |
+| ----- | --------------------------- | -------- | ---- | ----- |
+| L1    | Regex (amount + sign)       | ~60%     | Free | S4    |
+| L2    | Thai keyword dictionary     | +25%     | Free | S4    |
+| L3    | Per-user learned dictionary | +10%     | Free | S4    |
+| 🆕 L4 | AI fallback                 | ~5%      | Paid | S11   |
 
 🆕 **Escalation rule:** L4 is invoked only when L1–L3 produce confidence < 0.6 or fail to extract an amount. L4 must never run when earlier layers succeed.
 
@@ -270,7 +270,7 @@ Four-layer cascade, ordered by cost:
 
 ### S5 — Forecast Engine
 
-> 🔴 🆕 **This module is strictly AI-free.** Every number is produced by deterministic code. AI may *narrate* forecast output (S11 Task 4) but MUST NOT compute, adjust, or override any value. Reproducibility is a hard requirement — identical inputs must always yield identical outputs.
+> 🔴 🆕 **This module is strictly AI-free.** Every number is produced by deterministic code. AI may _narrate_ forecast output (S11 Task 4) but MUST NOT compute, adjust, or override any value. Reproducibility is a hard requirement — identical inputs must always yield identical outputs.
 
 #### Level 1 — Deterministic (required)
 
@@ -309,43 +309,52 @@ Replaced by learned factors after ≥ 12 months of history.
 
 #### Cold-start policy
 
-| Data age | Method | Confidence |
-|---|---|---|
-| 0–6 days | Recurring only | 🔴 Low — "Preliminary" |
-| 7–29 days | Recurring + partial average | 🟡 Medium |
-| 30+ days | Full formula + seasonality | 🟢 High |
+| Data age  | Method                      | Confidence             |
+| --------- | --------------------------- | ---------------------- |
+| 0–6 days  | Recurring only              | 🔴 Low — "Preliminary" |
+| 7–29 days | Recurring + partial average | 🟡 Medium              |
+| 30+ days  | Full formula + seasonality  | 🟢 High                |
 
 Confidence MUST be visible on every forecast display.
 
 #### Output contract
 
-> ⚠️ *Reconstructed from the surrounding spec — verify against the original before use.*
+> ⚠️ _Reconstructed from the surrounding spec — verify against the original before use._
 
 ```json
 {
   "user_id": "usr_01H...",
-  "computed_at": "2026-09-08T01:00:00+07:00",
+  "computed_at": "2026-09-10T01:00:00+07:00",
   "method_version": "L2-v1",
   "level": 2,
-  "balance_now": 45200.00,
-  "projected_eom_balance": 12400.00,
-  "daily_safe_to_spend": 1200.00,
+  "balance_now": 45200.0,
+  "projected_eom_balance": 48200.0,
+  "daily_safe_to_spend": 2910.0,
   "runway_date": null,
-  "shortfall_probability": 0.23,
+  "shortfall_probability": 0.05,
   "confidence": "high",
   "inputs": {
-    "median_daily_spend": 420.00,
-    "days_remaining": 114,
-    "recurring_in_remaining": 105000.00,
-    "recurring_out_remaining": 88000.00,
-    "buffer_thb": 0.00,
-    "seasonality_factors": { "9": 1.00, "10": 1.00, "11": 1.10, "12": 1.25 }
+    "median_daily_spend": 500.0,
+    "days_remaining": 20,
+    "recurring_in_remaining": 35000.0,
+    "recurring_out_remaining": 22000.0,
+    "buffer_thb": 0.0,
+    "seasonality_factors": { "9": 1.0 }
   }
 }
 ```
 
-🆕 `daily_safe_to_spend` and `inputs.buffer_thb` are new in v1.2 (Level 1.5).
+The example is internally consistent with the Level 1/1.5/2 formulas above, and every
+implementation should reproduce it exactly:
+
 ```
+projected_eom_balance = 45200 + 35000 − 22000 − (500 × 20 × 1.00) = 48200.00
+daily_safe_to_spend   = (45200 + 35000 − 22000 − 0) ÷ 20          =  2910.00
+```
+
+🆕 `daily_safe_to_spend` and `inputs.buffer_thb` are new in v1.2 (Level 1.5).
+
+````
 
 ---
 
@@ -364,7 +373,8 @@ CREATE TABLE users (
   display_name       TEXT,
   timezone           TEXT NOT NULL DEFAULT 'Asia/Bangkok',
   initial_balance    DECIMAL(12,2) NOT NULL DEFAULT 0,
-  current_balance    DECIMAL(12,2) NOT NULL DEFAULT 0,
+  current_balance    DECIMAL(12,2) NOT NULL DEFAULT 0,  -- cache: overwritten with the full
+                                                       -- recomputed sum, never incremented (M3)
   daily_spend_buffer DECIMAL(12,2) NOT NULL DEFAULT 0,
   ai_enabled         BOOLEAN NOT NULL DEFAULT false,
   notify_enabled     BOOLEAN NOT NULL DEFAULT false,
@@ -467,7 +477,7 @@ CREATE TABLE notification_log (
   channel    TEXT NOT NULL CHECK (channel IN ('reply','push')),
   sent_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-```
+````
 
 #### Email-ingestion tables
 
@@ -587,20 +597,26 @@ CREATE INDEX idx_keyword_lookup     ON user_keyword_map (user_id, keyword);
 - Amounts always positive; direction carried by `type` / `direction`.
 - `is_transfer = true` rows are excluded from spend stats and forecasting.
 - 🆕 Any row with `parsed_by = 'ai'` or `extracted_by = 'ai'` MUST also store a `confidence` value.
+- `users.current_balance` is a **read cache, not a source of truth**. The ledger is
+  authoritative: `B = initial_balance + Σ income − Σ expense` over non-deleted,
+  non-transfer rows. Every mutation recomputes that sum in full and overwrites the
+  column inside the same DB transaction. `balance = balance + amount` is forbidden
+  (M3) — an incremental patch that misses one rollback drifts silently and forever.
+  Only `src/modules/transaction/` may write this column.
 
 ---
 
 ### S7 — Scheduler
 
-| Job | Schedule | Description |
-|---|---|---|
-| `materialize-recurring` | Daily 00:30 (user TZ) | Create transactions from due rules |
-| `compute-forecast` | Daily 01:00 | Write `forecast_snapshots` |
-| `check-alerts` | Daily 08:00 (user TZ) | Critical events → Push within quota |
-| 🆕 `ai-budget-check` | Hourly | Sum `ai_usage_log`; disable AI on cap breach |
-| 🆕 `ai-cache-cleanup` | Weekly Sun 02:00 | Purge expired `ai_cache` rows |
-| 🆕 `generate-insights` | Monthly, 1st 09:00 | Batch-generate insights for opted-in users |
-| `cleanup` | Weekly Sun 03:00 | Purge `raw_emails` > 180 days, VACUUM |
+| Job                     | Schedule              | Description                                  |
+| ----------------------- | --------------------- | -------------------------------------------- |
+| `materialize-recurring` | Daily 00:30 (user TZ) | Create transactions from due rules           |
+| `compute-forecast`      | Daily 01:00           | Write `forecast_snapshots`                   |
+| `check-alerts`          | Daily 08:00 (user TZ) | Critical events → Push within quota          |
+| 🆕 `ai-budget-check`    | Hourly                | Sum `ai_usage_log`; disable AI on cap breach |
+| 🆕 `ai-cache-cleanup`   | Weekly Sun 02:00      | Purge expired `ai_cache` rows                |
+| 🆕 `generate-insights`  | Monthly, 1st 09:00    | Batch-generate insights for opted-in users   |
+| `cleanup`               | Weekly Sun 03:00      | Purge `raw_emails` > 180 days, VACUUM        |
 
 All jobs MUST be idempotent and respect each user's timezone.
 
@@ -655,10 +671,10 @@ interface BankParser {
 
 #### Two-tier extraction pipeline 🆕
 
-| Tier | Method | When it runs | Cost |
-|---|---|---|---|
-| R1 | Regex (`KPlusParser`) | Always, first | Free |
-| R2 | AI extraction (S11) | Only when R1 fails or is incomplete | Paid |
+| Tier | Method                | When it runs                        | Cost |
+| ---- | --------------------- | ----------------------------------- | ---- |
+| R1   | Regex (`KPlusParser`) | Always, first                       | Free |
+| R2   | AI extraction (S11)   | Only when R1 fails or is incomplete | Paid |
 
 ```
 raw_email
@@ -682,27 +698,27 @@ R1: KPlusParser.parse()
 
 #### Why AI is the fallback, not the primary
 
-| | Regex | AI |
-|---|---|---|
-| Accuracy on known template | ~100% | ~90–95% |
-| Speed | < 1 ms | 1–3 s |
-| Cost | Free | Paid |
-| Handles template change | ❌ breaks | ✅ adapts |
-| Deterministic | ✅ | ❌ |
+|                            | Regex     | AI        |
+| -------------------------- | --------- | --------- |
+| Accuracy on known template | ~100%     | ~90–95%   |
+| Speed                      | < 1 ms    | 1–3 s     |
+| Cost                       | Free      | Paid      |
+| Handles template change    | ❌ breaks | ✅ adapts |
+| Deterministic              | ✅        | ❌        |
 
 **Conclusion:** Regex handles the 95% steady state. AI exists to keep the system alive during the days or weeks between a K PLUS template change and a developer shipping a new regex rule — which is precisely the failure mode that would otherwise cause silent data loss.
 
 #### Extracted fields
 
-| Field | Required | Notes |
-|---|---|---|
-| `amount` | ✅ | |
-| `direction` | ✅ | `in` / `out` |
-| `occurred_at` | ✅ | Convert to `Asia/Bangkok` |
-| `merchant_raw` | ⬜ | Often a POS code |
-| 🆕 `merchant_clean` | ⬜ | Normalized by S11 Task 2 |
-| `balance_after` | ⬜ | Used by S10 reconciliation |
-| `bank_ref` | ⬜ | Preferred dedup key |
+| Field               | Required | Notes                      |
+| ------------------- | -------- | -------------------------- |
+| `amount`            | ✅       |                            |
+| `direction`         | ✅       | `in` / `out`               |
+| `occurred_at`       | ✅       | Convert to `Asia/Bangkok`  |
+| `merchant_raw`      | ⬜       | Often a POS code           |
+| 🆕 `merchant_clean` | ⬜       | Normalized by S11 Task 2   |
+| `balance_after`     | ⬜       | Used by S10 reconciliation |
+| `bank_ref`          | ⬜       | Preferred dedup key        |
 
 #### Robustness requirements
 
@@ -745,12 +761,12 @@ R1: KPlusParser.parse()
 
 **Confidence policy:**
 
-| Condition | Action |
-|---|---|
-| High (unique `bank_ref`, regex-extracted) | Auto-confirm, silent |
-| Medium | `pending` + LINE Flex confirmation |
-| 🆕 AI-extracted (`extracted_by='ai'`) | **Always `pending` — no exceptions** |
-| Low / parse failure | Hold in `/pending` |
+| Condition                                 | Action                               |
+| ----------------------------------------- | ------------------------------------ |
+| High (unique `bank_ref`, regex-extracted) | Auto-confirm, silent                 |
+| Medium                                    | `pending` + LINE Flex confirmation   |
+| 🆕 AI-extracted (`extracted_by='ai'`)     | **Always `pending` — no exceptions** |
+| Low / parse failure                       | Hold in `/pending`                   |
 
 ---
 
@@ -793,13 +809,13 @@ R1: KPlusParser.parse()
 
 Input: raw Thai text. Output:
 
-> ⚠️ *Reconstructed from the surrounding spec — verify against the original before use.*
+> ⚠️ _Reconstructed from the surrounding spec — verify against the original before use._
 
 ```json
 {
   "transactions": [
     {
-      "amount": 890.00,
+      "amount": 890.0,
       "type": "expense",
       "category_hint": "ค่าไฟ",
       "note": "จ่ายค่าไฟ",
@@ -807,7 +823,7 @@ Input: raw Thai text. Output:
       "confidence": 0.88
     },
     {
-      "amount": 210.00,
+      "amount": 210.0,
       "type": "expense",
       "category_hint": "ค่าน้ำ",
       "note": "ค่าน้ำ",
@@ -818,7 +834,7 @@ Input: raw Thai text. Output:
 }
 ```
 
-**T2 — `normalizeMerchant`** (caller: S9) — *highest ROI task*
+**T2 — `normalizeMerchant`** (caller: S9) — _highest ROI task_
 
 ```
 "POS 7-11 SUKHUMV 42"  → { clean: "7-Eleven", category: "ของใช้",     confidence: 0.95 }
@@ -834,11 +850,11 @@ Input: sender, subject, plain-text body (≤ 2,000 chars, PII-redacted).
 
 ```json
 {
-  "amount": 1250.00,
+  "amount": 1250.0,
   "direction": "out",
   "occurred_at": "2026-09-08T14:32:00+07:00",
   "merchant_raw": "POS BIGC CHIDLOM",
-  "balance_after": 45200.00,
+  "balance_after": 45200.0,
   "bank_ref": "TXN20260908143200",
   "confidence": 0.91
 }
@@ -846,7 +862,7 @@ Input: sender, subject, plain-text body (≤ 2,000 chars, PII-redacted).
 
 **Hard constraints:**
 
-- Prompt MUST instruct: *"Extract only. Do not infer, estimate, or calculate any value not literally present. Return null for absent fields."*
+- Prompt MUST instruct: _"Extract only. Do not infer, estimate, or calculate any value not literally present. Return null for absent fields."_
 - Output MUST pass Zod validation before persistence.
 - Sanity checks: `0 < amount ≤ 10,000,000`; `occurred_at` within ±7 days of `received_at`; `direction ∈ {in, out}`.
 - Any failed check → discard result, mark `failed`, route to manual review.
@@ -871,15 +887,15 @@ Output is prose only. Every figure in it must already exist in the input payload
 
 #### 3.11.3 Guard Layer requirements
 
-| Guard | Rule |
-|---|---|
-| Cache-first | Every task MUST check `ai_cache` before any provider call |
-| Rate limit | 20 AI calls per user per day (T1/T4); T3 capped at 50/day system-wide |
+| Guard          | Rule                                                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Cache-first    | Every task MUST check `ai_cache` before any provider call                                                               |
+| Rate limit     | 20 AI calls per user per day (T1/T4); T3 capped at 50/day system-wide                                                   |
 | Budget breaker | Hourly job sums `ai_usage_log.cost_thb`; on reaching `AI_MONTHLY_BUDGET_THB`, set `AI_ENABLED=false` and alert the team |
-| PII redaction | Strip account numbers, card numbers, phone numbers, national IDs, and full names before any outbound call |
-| Timeout | 8 s hard timeout → fallback |
-| Retry | Max 1 retry, exponential backoff |
-| Logging | Every call logged to `ai_usage_log`, including cache hits |
+| PII redaction  | Strip account numbers, card numbers, phone numbers, national IDs, and full names before any outbound call               |
+| Timeout        | 8 s hard timeout → fallback                                                                                             |
+| Retry          | Max 1 retry, exponential backoff                                                                                        |
+| Logging        | Every call logged to `ai_usage_log`, including cache hits                                                               |
 
 #### 3.11.4 Non-negotiable rules
 
@@ -892,15 +908,15 @@ Output is prose only. Every figure in it must already exist in the input payload
 
 #### 3.11.5 Explicitly excluded from AI
 
-| Task | Reason | Implementation instead |
-|---|---|---|
-| Forecast calculation | Non-deterministic; users lose trust if the same data yields different answers | Math + Monte Carlo (S5) |
-| Duplicate detection | Requires exact, auditable matching | Fuzzy match, amount + 30-min window (S10) |
-| Internal transfer detection | Deterministic pattern | Rule-based (S10) |
-| Simple category lookup | Dictionary answers in microseconds, free | `user_keyword_map` (S4 L2/L3) |
-| Recurring-pattern detection | Statistics outperform AI here and cost nothing | `GROUP BY` + interval analysis |
-| Anomaly detection | Z-score / IQR is explainable and free | Statistics |
-| General chat | Not core value; unbounded cost | Not implemented |
+| Task                        | Reason                                                                        | Implementation instead                    |
+| --------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------- |
+| Forecast calculation        | Non-deterministic; users lose trust if the same data yields different answers | Math + Monte Carlo (S5)                   |
+| Duplicate detection         | Requires exact, auditable matching                                            | Fuzzy match, amount + 30-min window (S10) |
+| Internal transfer detection | Deterministic pattern                                                         | Rule-based (S10)                          |
+| Simple category lookup      | Dictionary answers in microseconds, free                                      | `user_keyword_map` (S4 L2/L3)             |
+| Recurring-pattern detection | Statistics outperform AI here and cost nothing                                | `GROUP BY` + interval analysis            |
+| Anomaly detection           | Z-score / IQR is explainable and free                                         | Statistics                                |
+| General chat                | Not core value; unbounded cost                                                | Not implemented                           |
 
 **Guiding principle:** If the task demands a correct, repeatable answer → write code. If the task demands understanding unpredictable human input → use AI.
 
@@ -908,13 +924,13 @@ Output is prose only. Every figure in it must already exist in the input payload
 
 Assumption: 20 users × 5 entries/day.
 
-| Task | Raw calls/mo | After cache | Notes |
-|---|---|---|---|
-| T1 parse fallback | ~300 | ~150 | Shrinks as dictionary grows |
-| T2 merchant | ~600 | ~60 | ~90% cache hit; global dictionary |
-| T3 email extract | ~30 | ~30 | Spikes only on template change |
-| T4 insight | ~40 | ~40 | Longer prompts, low volume |
-| **Total** | **~970** | **~280** | Within budget with a small model |
+| Task              | Raw calls/mo | After cache | Notes                             |
+| ----------------- | ------------ | ----------- | --------------------------------- |
+| T1 parse fallback | ~300         | ~150        | Shrinks as dictionary grows       |
+| T2 merchant       | ~600         | ~60         | ~90% cache hit; global dictionary |
+| T3 email extract  | ~30          | ~30         | Spikes only on template change    |
+| T4 insight        | ~40          | ~40         | Longer prompts, low volume        |
+| **Total**         | **~970**     | **~280**    | Within budget with a small model  |
 
 **Requirement:** a hard spending cap MUST be configured in the provider dashboard **in addition to** the in-code breaker. Code-level limits can be defeated by a bug; provider-level caps cannot.
 
@@ -924,71 +940,71 @@ Assumption: 20 users × 5 entries/day.
 
 ### P0 — Must-have
 
-| # | Feature |
-|---|---|
-| 1 | Onboarding (initial balance + recurring setup) |
-| 2 | Chat-based logging via LINE |
-| 3 | Web form entry |
-| 4 | Transaction CRUD + filtering |
-| 5 | Categories (system + custom) |
-| 6 | Recurring rules |
-| 7 | Auto-computed current balance |
-| 8 | EOM forecast (Level 1 + 2) |
-| 🆕 8b | Daily safe-to-spend (Level 1.5) |
-| 9 | LINE Login authentication |
-| 10 | K PLUS email ingestion (regex tier) |
+| #     | Feature                                        |
+| ----- | ---------------------------------------------- |
+| 1     | Onboarding (initial balance + recurring setup) |
+| 2     | Chat-based logging via LINE                    |
+| 3     | Web form entry                                 |
+| 4     | Transaction CRUD + filtering                   |
+| 5     | Categories (system + custom)                   |
+| 6     | Recurring rules                                |
+| 7     | Auto-computed current balance                  |
+| 8     | EOM forecast (Level 1 + 2)                     |
+| 🆕 8b | Daily safe-to-spend (Level 1.5)                |
+| 9     | LINE Login authentication                      |
+| 10    | K PLUS email ingestion (regex tier)            |
 
 ### P1 — Should-have
 
-| # | Feature |
-|---|---|
-| 11 | Dashboard with category / monthly charts |
-| 12 | Forecast line chart |
-| 13 | Shortfall probability display |
-| 14 | Runway date |
-| 15 | Category budgets + progress |
-| 16 | `สรุป` chat summary (Flex) |
-| 17 | Daily push notification (opt-in) |
-| 18 | Self-learning parser corrections |
-| 19 | CSV / JSON export |
-| 20 | Transaction search |
-| 21 | Pending bank transaction review UI |
-| 22 | Internal transfer detection |
-| 🆕 23 | AI merchant normalization (T2) |
-| 🆕 24 | AI text parser fallback (T1) |
+| #     | Feature                                  |
+| ----- | ---------------------------------------- |
+| 11    | Dashboard with category / monthly charts |
+| 12    | Forecast line chart                      |
+| 13    | Shortfall probability display            |
+| 14    | Runway date                              |
+| 15    | Category budgets + progress              |
+| 16    | `สรุป` chat summary (Flex)               |
+| 17    | Daily push notification (opt-in)         |
+| 18    | Self-learning parser corrections         |
+| 19    | CSV / JSON export                        |
+| 20    | Transaction search                       |
+| 21    | Pending bank transaction review UI       |
+| 22    | Internal transfer detection              |
+| 🆕 23 | AI merchant normalization (T2)           |
+| 🆕 24 | AI text parser fallback (T1)             |
 
 ### P2 — Nice-to-have
 
-| # | Feature |
-|---|---|
-| 🆕 25 | AI email extraction fallback (T3) |
-| 🆕 26 | AI insight generator (T4) |
+| #     | Feature                              |
+| ----- | ------------------------------------ |
+| 🆕 25 | AI email extraction fallback (T3)    |
+| 🆕 26 | AI insight generator (T4)            |
 | 🆕 27 | AI usage / cost dashboard (internal) |
-| 28 | What-if simulator (slider) |
-| 29 | Monte Carlo + fan chart |
-| 30 | Goal tracker |
-| 31 | Anomaly detection (statistical) |
-| 32 | Forecast accuracy scorecard |
-| 33 | Additional bank parsers (SCB, KTB) |
-| 34 | Receipt OCR |
-| 35 | Dark mode / PWA |
+| 28    | What-if simulator (slider)           |
+| 29    | Monte Carlo + fan chart              |
+| 30    | Goal tracker                         |
+| 31    | Anomaly detection (statistical)      |
+| 32    | Forecast accuracy scorecard          |
+| 33    | Additional bank parsers (SCB, KTB)   |
+| 34    | Receipt OCR                          |
+| 35    | Dark mode / PWA                      |
 
 ---
 
 ## 5. Roadmap (10 Weeks)
 
-| Week | Goal | Definition of Done |
-|---|---|---|
-| 1 | Foundation | Repo + CI green, DB schema merged, LINE channels created, OpenAPI draft agreed |
-| 2 | Auth | LINE Login end-to-end; webhook signature verification passes; session persists |
-| 3 | Transactions (web) | Full CRUD from browser; balance recomputes correctly |
-| 4 | Transactions (chat) | `กาแฟ 80` appears on dashboard; Flex confirm/correct works |
-| 5 | Recurring + Onboarding | New user completes onboarding; rules materialize via cron |
-| 6 | Forecast v1 | EOM card renders in web + chat with confidence badge |
-| 7 | Dashboard + Budgets | Charts, budgets, search, export |
-| 8 | Email ingestion (regex) | Forwarded K PLUS email → `bank_transactions` via R1 |
-| 9 | Reconciliation + 🆕 AI Layer | Dedup + transfer detection working; S11 guard layer, cache, T1, T2 live |
-| 10 | 🆕 AI T3/T4 + Polish + Test | AI email fallback verified against a deliberately broken template; insights render; internal testing |
+| Week | Goal                         | Definition of Done                                                                                   |
+| ---- | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 1    | Foundation                   | Repo + CI green, DB schema merged, LINE channels created, OpenAPI draft agreed                       |
+| 2    | Auth                         | LINE Login end-to-end; webhook signature verification passes; session persists                       |
+| 3    | Transactions (web)           | Full CRUD from browser; balance recomputes correctly                                                 |
+| 4    | Transactions (chat)          | `กาแฟ 80` appears on dashboard; Flex confirm/correct works                                           |
+| 5    | Recurring + Onboarding       | New user completes onboarding; rules materialize via cron                                            |
+| 6    | Forecast v1                  | EOM card renders in web + chat with confidence badge                                                 |
+| 7    | Dashboard + Budgets          | Charts, budgets, search, export                                                                      |
+| 8    | Email ingestion (regex)      | Forwarded K PLUS email → `bank_transactions` via R1                                                  |
+| 9    | Reconciliation + 🆕 AI Layer | Dedup + transfer detection working; S11 guard layer, cache, T1, T2 live                              |
+| 10   | 🆕 AI T3/T4 + Polish + Test  | AI email fallback verified against a deliberately broken template; insights render; internal testing |
 
 **Buffer policy:** If a week slips, cut from P2 first, then P1. Weeks 6, 8, and 9 must not be cut.
 🆕 **AI rule:** S11 MUST NOT begin before Week 9. Rule-based paths must be proven first — otherwise AI becomes an expensive crutch masking weak fundamentals.
@@ -997,14 +1013,14 @@ Assumption: 20 users × 5 entries/day.
 
 ## 6. Team Allocation
 
-| Member | Role | Owns |
-|---|---|---|
-| A | Backend Lead | S1 Gateway, S3.1 Auth, deployment, security review |
-| B | Backend | S3.2–3.4, S6 schema/migrations, S10 Reconciliation |
-| C | Backend / Data | S4 Parser, S5 Forecast, S7 Scheduler, 🆕 S11 AI Service |
-| D | Frontend Lead | S2 architecture, dashboard, charts |
-| E | Frontend / UX | Onboarding, forms, Flex design, QA, 🆕 AI badges + insight cards |
-| A + C | Shared | S8 Email Ingestion, S9 Bank Parser (R1 + R2) |
+| Member | Role           | Owns                                                             |
+| ------ | -------------- | ---------------------------------------------------------------- |
+| A      | Backend Lead   | S1 Gateway, S3.1 Auth, deployment, security review               |
+| B      | Backend        | S3.2–3.4, S6 schema/migrations, S10 Reconciliation               |
+| C      | Backend / Data | S4 Parser, S5 Forecast, S7 Scheduler, 🆕 S11 AI Service          |
+| D      | Frontend Lead  | S2 architecture, dashboard, charts                               |
+| E      | Frontend / UX  | Onboarding, forms, Flex design, QA, 🆕 AI badges + insight cards |
+| A + C  | Shared         | S8 Email Ingestion, S9 Bank Parser (R1 + R2)                     |
 
 **Critical coordination:** B ↔ D on API contracts — write the OpenAPI spec in Week 1.
 🆕 C owns the entire AI budget. No other member may add a provider call without C's review.
@@ -1059,46 +1075,46 @@ AI_CACHE_TTL_DAYS=90
 
 ## 8. Security Requirements
 
-| ID | Requirement | Severity |
-|---|---|---|
-| SEC-1 | Verify `X-Line-Signature` on every webhook | 🔴 Critical |
-| SEC-2 | Verify OAuth `state` (CSRF) | 🔴 Critical |
-| SEC-3 | Verify `id_token` signature, `iss`, `aud`, `exp`, `nonce` | 🔴 Critical |
-| SEC-4 | Session in `httpOnly` + `secure` + `sameSite` cookie | 🔴 Critical |
-| SEC-5 | Never trust client-supplied `userId` | 🔴 Critical |
-| SEC-6 | Verify SPF/DKIM on inbound email | 🔴 Critical |
-| SEC-7 | `ingest_token` ≥ 32 random bytes | 🟠 High |
-| SEC-8 | Encrypt any OAuth refresh token at rest | 🟠 High |
-| SEC-9 | Rate limit 60 req/min per user | 🟠 High |
-| SEC-10 | Row-level authorization on every query | 🔴 Critical |
-| SEC-11 | Redact PII in logs and Sentry | 🟠 High |
-| SEC-12 | Data export + hard delete endpoints | 🟡 Medium |
+| ID        | Requirement                                                          | Severity    |
+| --------- | -------------------------------------------------------------------- | ----------- |
+| SEC-1     | Verify `X-Line-Signature` on every webhook                           | 🔴 Critical |
+| SEC-2     | Verify OAuth `state` (CSRF)                                          | 🔴 Critical |
+| SEC-3     | Verify `id_token` signature, `iss`, `aud`, `exp`, `nonce`            | 🔴 Critical |
+| SEC-4     | Session in `httpOnly` + `secure` + `sameSite` cookie                 | 🔴 Critical |
+| SEC-5     | Never trust client-supplied `userId`                                 | 🔴 Critical |
+| SEC-6     | Verify SPF/DKIM on inbound email                                     | 🔴 Critical |
+| SEC-7     | `ingest_token` ≥ 32 random bytes                                     | 🟠 High     |
+| SEC-8     | Encrypt any OAuth refresh token at rest                              | 🟠 High     |
+| SEC-9     | Rate limit 60 req/min per user                                       | 🟠 High     |
+| SEC-10    | Row-level authorization on every query                               | 🔴 Critical |
+| SEC-11    | Redact PII in logs and Sentry                                        | 🟠 High     |
+| SEC-12    | Data export + hard delete endpoints                                  | 🟡 Medium   |
 | 🆕 SEC-13 | PII redaction before every AI call (account/card/phone/ID/full name) | 🔴 Critical |
-| 🆕 SEC-14 | Never send raw transaction history to AI — aggregates only | 🔴 Critical |
-| 🆕 SEC-15 | Validate all AI output against Zod schema before persistence | 🔴 Critical |
-| 🆕 SEC-16 | AI is opt-in per user, disableable at any time | 🟠 High |
-| 🆕 SEC-17 | Hard spending cap in provider dashboard, not only in code | 🟠 High |
-| 🆕 SEC-18 | AI API key server-side only — never exposed to the client | 🔴 Critical |
+| 🆕 SEC-14 | Never send raw transaction history to AI — aggregates only           | 🔴 Critical |
+| 🆕 SEC-15 | Validate all AI output against Zod schema before persistence         | 🔴 Critical |
+| 🆕 SEC-16 | AI is opt-in per user, disableable at any time                       | 🟠 High     |
+| 🆕 SEC-17 | Hard spending cap in provider dashboard, not only in code            | 🟠 High     |
+| 🆕 SEC-18 | AI API key server-side only — never exposed to the client            | 🔴 Critical |
 
 ---
 
 ## 9. Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| K PLUS changes email template | Parser silently breaks | Persist `raw_email`; >10% failure alert; 🆕 AI R2 keeps ingestion alive while a new regex rule is written |
-| LINE Push quota exceeded | Notifications stop | Reply-first design; `notification_log` counter; opt-in only |
-| Parser accuracy too low | Users abandon | Confirm/correct buttons + learned dictionary + AI L4 |
-| Forecast cold start | Users distrust numbers | Explicit confidence badges |
-| Duplicate transactions | Balance drift | S10 fuzzy matching, 30-min window |
-| Self-transfers counted as spend | Forecast inflated | `is_transfer` flag + detection |
-| Vercel Hobby ToS | Account suspension | Remain non-commercial |
-| Email forwarding misconfigured | Silent data loss | Health check: warn if no email in 7 days |
-| 🆕 AI cost overrun | Budget blown | Cache-first + rate limit + hourly breaker + provider-level cap |
-| 🆕 AI hallucinates a transaction | Corrupted financial data | Zod validation + sanity ranges + always `pending` + human confirmation |
-| 🆕 Over-reliance on AI for email | Regex rules rot; cost creeps up | Weekly `parsed_ai` count report; rising trend triggers a regex-update task |
-| 🆕 AI provider outage | Feature degradation | Full deterministic fallback; all P0 features work with `AI_ENABLED=false` |
-| 🆕 Privacy concern | Trust loss | PII redaction + aggregates only + per-user opt-in + clear disclosure |
+| Risk                             | Impact                          | Mitigation                                                                                                |
+| -------------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| K PLUS changes email template    | Parser silently breaks          | Persist `raw_email`; >10% failure alert; 🆕 AI R2 keeps ingestion alive while a new regex rule is written |
+| LINE Push quota exceeded         | Notifications stop              | Reply-first design; `notification_log` counter; opt-in only                                               |
+| Parser accuracy too low          | Users abandon                   | Confirm/correct buttons + learned dictionary + AI L4                                                      |
+| Forecast cold start              | Users distrust numbers          | Explicit confidence badges                                                                                |
+| Duplicate transactions           | Balance drift                   | S10 fuzzy matching, 30-min window                                                                         |
+| Self-transfers counted as spend  | Forecast inflated               | `is_transfer` flag + detection                                                                            |
+| Vercel Hobby ToS                 | Account suspension              | Remain non-commercial                                                                                     |
+| Email forwarding misconfigured   | Silent data loss                | Health check: warn if no email in 7 days                                                                  |
+| 🆕 AI cost overrun               | Budget blown                    | Cache-first + rate limit + hourly breaker + provider-level cap                                            |
+| 🆕 AI hallucinates a transaction | Corrupted financial data        | Zod validation + sanity ranges + always `pending` + human confirmation                                    |
+| 🆕 Over-reliance on AI for email | Regex rules rot; cost creeps up | Weekly `parsed_ai` count report; rising trend triggers a regex-update task                                |
+| 🆕 AI provider outage            | Feature degradation             | Full deterministic fallback; all P0 features work with `AI_ENABLED=false`                                 |
+| 🆕 Privacy concern               | Trust loss                      | PII redaction + aggregates only + per-user opt-in + clear disclosure                                      |
 
 ---
 
@@ -1120,42 +1136,42 @@ At the end of Week 10, the project is successful if:
 
 ## Appendix A — Glossary
 
-| Term | Definition |
-|---|---|
-| EOM | End of Month — the last day of the current calendar month |
-| Runway date | Projected date on which balance reaches zero |
-| 🆕 Safe-to-spend | Suggested daily spending cap so balance doesn't go below the user's buffer before month-end |
-| Recurring rule | A repeating income/expense definition used for forecasting |
-| Materialize | Converting a recurring rule into an actual transaction on its due date |
-| Reconciliation | Matching bank-sourced records against user-entered records |
-| Confidence level | Qualitative indicator of forecast reliability based on data volume |
-| Ingest token | Random secret embedded in the forwarding address identifying the user |
-| 🆕 Guard Layer | Pre-flight checks (cache, rate limit, budget, redaction) before any AI call |
-| 🆕 Circuit breaker | Automatic AI shutdown on budget cap breach |
-| 🆕 R1 / R2 | Bank parser tiers — R1 regex (primary), R2 AI (fallback) |
-| 🆕 Cache-first | Mandatory `ai_cache` lookup preceding every provider call |
+| Term               | Definition                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| EOM                | End of Month — the last day of the current calendar month                                   |
+| Runway date        | Projected date on which balance reaches zero                                                |
+| 🆕 Safe-to-spend   | Suggested daily spending cap so balance doesn't go below the user's buffer before month-end |
+| Recurring rule     | A repeating income/expense definition used for forecasting                                  |
+| Materialize        | Converting a recurring rule into an actual transaction on its due date                      |
+| Reconciliation     | Matching bank-sourced records against user-entered records                                  |
+| Confidence level   | Qualitative indicator of forecast reliability based on data volume                          |
+| Ingest token       | Random secret embedded in the forwarding address identifying the user                       |
+| 🆕 Guard Layer     | Pre-flight checks (cache, rate limit, budget, redaction) before any AI call                 |
+| 🆕 Circuit breaker | Automatic AI shutdown on budget cap breach                                                  |
+| 🆕 R1 / R2         | Bank parser tiers — R1 regex (primary), R2 AI (fallback)                                    |
+| 🆕 Cache-first     | Mandatory `ai_cache` lookup preceding every provider call                                   |
 
 ---
 
 ## Appendix B — 🆕 AI Decision Matrix
 
-| Task | AI? | Rationale |
-|---|---|---|
-| Parse simple text (`กาแฟ 80`) | ❌ | Regex is instant and free |
-| Parse complex Thai text | ✅ T1 | Unbounded input variety |
-| Normalize merchant codes | ✅ T2 | Highest ROI; global cache |
-| Extract from known email template | ❌ | Regex is 100% accurate |
-| Extract from broken/changed template | ✅ T3 | Only viable resilience mechanism |
-| Categorize transactions | ⚠️ Partial | Dictionary first, AI only on miss |
-| Compute forecast | ❌ | Must be deterministic |
-| 🆕 Compute daily safe-to-spend | ❌ | Simple algebra on already-deterministic S5 inputs — no reason to involve AI |
-| Narrate forecast in Thai (incl. `เหลือ` in LINE) | ✅ T4 | Language, not arithmetic — numbers always come from S5 |
-| Detect duplicates | ❌ | Requires exact matching |
-| Detect recurring patterns | ❌ | `GROUP BY` outperforms AI |
-| Detect anomalies | ❌ | Z-score is explainable and free |
+| Task                                             | AI?        | Rationale                                                                   |
+| ------------------------------------------------ | ---------- | --------------------------------------------------------------------------- |
+| Parse simple text (`กาแฟ 80`)                    | ❌         | Regex is instant and free                                                   |
+| Parse complex Thai text                          | ✅ T1      | Unbounded input variety                                                     |
+| Normalize merchant codes                         | ✅ T2      | Highest ROI; global cache                                                   |
+| Extract from known email template                | ❌         | Regex is 100% accurate                                                      |
+| Extract from broken/changed template             | ✅ T3      | Only viable resilience mechanism                                            |
+| Categorize transactions                          | ⚠️ Partial | Dictionary first, AI only on miss                                           |
+| Compute forecast                                 | ❌         | Must be deterministic                                                       |
+| 🆕 Compute daily safe-to-spend                   | ❌         | Simple algebra on already-deterministic S5 inputs — no reason to involve AI |
+| Narrate forecast in Thai (incl. `เหลือ` in LINE) | ✅ T4      | Language, not arithmetic — numbers always come from S5                      |
+| Detect duplicates                                | ❌         | Requires exact matching                                                     |
+| Detect recurring patterns                        | ❌         | `GROUP BY` outperforms AI                                                   |
+| Detect anomalies                                 | ❌         | Z-score is explainable and free                                             |
 
 ---
 
-*Document version: 1.2 — 2026-09-09*
-*Changelog v1.1: Added S11 AI Service; S9 two-tier extraction (R1 regex / R2 AI); AI tables (`ai_cache`, `ai_usage_log`, `merchant_dictionary`); SEC-13→18; AI risk register; Appendix B decision matrix*
-*Changelog v1.2: Product thesis and forecast horizon changed from end-of-year (EOY) to end-of-month (EOM) throughout (S5 formulas, `forecast_snapshots` schema, Feature Inventory #8, Roadmap Week 6, Success Criteria #3, Glossary); `เหลือ` LINE command now narrated in natural Thai via AI T4 (`generateInsight`), with deterministic Flex fallback when AI is unavailable, rate-limited, or `AI_ENABLED=false`; added S5 Level 1.5 daily safe-to-spend (deterministic, no AI), `daily_safe_to_spend` output field, `users.daily_spend_buffer` setting, Feature #8b, Glossary term, Appendix B row*
+_Document version: 1.2 — 2026-09-09_
+_Changelog v1.1: Added S11 AI Service; S9 two-tier extraction (R1 regex / R2 AI); AI tables (`ai_cache`, `ai_usage_log`, `merchant_dictionary`); SEC-13→18; AI risk register; Appendix B decision matrix_
+_Changelog v1.2: Product thesis and forecast horizon changed from end-of-year (EOY) to end-of-month (EOM) throughout (S5 formulas, `forecast_snapshots` schema, Feature Inventory #8, Roadmap Week 6, Success Criteria #3, Glossary); `เหลือ` LINE command now narrated in natural Thai via AI T4 (`generateInsight`), with deterministic Flex fallback when AI is unavailable, rate-limited, or `AI_ENABLED=false`; added S5 Level 1.5 daily safe-to-spend (deterministic, no AI), `daily_safe_to_spend` output field, `users.daily_spend_buffer` setting, Feature #8b, Glossary term, Appendix B row_
