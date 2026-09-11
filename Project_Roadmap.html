@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roadmap | LINE Bot บันทึกรายรับ-รายจ่าย</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1420; --card:#1a2130; --card2:#212a3d; --line:#2e394f;
+  --text:#e8edf7; --muted:#93a1bd; --accent:#4ade80;
+  --w1:#3b82f6; --w2:#eab308; --w3:#f97316; --w4:#ef4444; --w0:#8b5cf6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);line-height:1.65;padding:24px 16px 80px}
+.wrap{max-width:1080px;margin:0 auto}
+
+/* Header */
+header{background:linear-gradient(135deg,#1e3a5f,#2d1b52);border-radius:18px;padding:32px;margin-bottom:22px;border:1px solid var(--line)}
+header h1{font-size:1.9rem;font-weight:800;margin-bottom:8px}
+header p{color:var(--muted);font-size:.98rem}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.badge{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);padding:5px 13px;border-radius:20px;font-size:.82rem}
+
+/* Progress */
+.prog-box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:22px}
+.prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:.9rem}
+.prog-bar{height:12px;background:#0b101a;border-radius:20px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#22c55e,#4ade80);width:0%;transition:width .3s}
+.reset{background:none;border:1px solid var(--line);color:var(--muted);padding:5px 12px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.8rem}
+.reset:hover{border-color:#ef4444;color:#ef4444}
+
+/* Tabs */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.tab{background:var(--card);border:1px solid var(--line);color:var(--muted);padding:9px 18px;border-radius:10px;cursor:pointer;font-family:inherit;font-size:.92rem;font-weight:600}
+.tab:hover{color:var(--text)}
+.tab.on{background:var(--accent);color:#06210f;border-color:var(--accent)}
+.panel{display:none} .panel.on{display:block}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:18px}
+h2{font-size:1.3rem;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+h3{font-size:1.03rem;margin:20px 0 10px;color:#c7d4ec}
+.bar{width:5px;height:24px;border-radius:3px;background:var(--accent)}
+
+/* Timeline */
+.tl{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.tl-item{background:var(--card2);border-radius:14px;padding:18px;border-top:4px solid}
+.tl-item h4{font-size:1.05rem;margin-bottom:6px}
+.tl-item .wk{font-size:.75rem;color:var(--muted);letter-spacing:1px;margin-bottom:4px}
+.tl-item p{font-size:.88rem;color:var(--muted);margin-top:8px}
+.goal{background:rgba(74,222,128,.1);border-left:3px solid var(--accent);padding:8px 10px;border-radius:6px;font-size:.85rem;margin-top:10px}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0}
+th{background:var(--card2);text-align:left;padding:11px;font-weight:600;font-size:.85rem}
+td{padding:11px;border-top:1px solid var(--line);vertical-align:top}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+/* Checklist */
+.chk{display:flex;gap:11px;padding:9px 12px;border-radius:9px;margin-bottom:5px;cursor:pointer;transition:.15s;align-items:flex-start}
+.chk:hover{background:rgba(255,255,255,.04)}
+.chk input{width:19px;height:19px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;margin-top:3px}
+.chk span{font-size:.92rem}
+.chk input:checked + span{opacity:.42;text-decoration:line-through}
+.who{background:#2d3b55;color:#a9c0e8;padding:1px 8px;border-radius:6px;font-size:.75rem;margin-right:6px;font-weight:600}
+.crit{color:#fca5a5;font-weight:600}
+
+/* Misc */
+.warn{background:rgba(239,68,68,.09);border-left:4px solid #ef4444;padding:13px 16px;border-radius:9px;margin:12px 0;font-size:.9rem}
+.tip{background:rgba(74,222,128,.09);border-left:4px solid var(--accent);padding:13px 16px;border-radius:9px;margin:12px 0;font-size:.9rem}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.mini{background:var(--card2);border-radius:12px;padding:16px}
+.mini h4{font-size:.95rem;margin-bottom:8px}
+pre{background:#0b101a;border:1px solid var(--line);border-radius:10px;padding:16px;overflow-x:auto;font-size:.82rem;color:#a8b8d8;line-height:1.7}
+ol,ul{padding-left:22px;font-size:.9rem}
+li{margin-bottom:6px}
+.kpi{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.kpi b{color:var(--accent)}
+footer{text-align:center;color:var(--muted);font-size:.82rem;margin-top:30px}
+@media(max-width:600px){header h1{font-size:1.4rem}.card{padding:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>🤖 LINE Bot บันทึกรายรับ-รายจ่าย + AI Planner</h1>
+  <p>Roadmap โปรเจกต์ · ทีม 5 คน · ระยะเวลา 1 เดือน · งบประมาณ 0 บาท</p>
+  <div class="badges">
+    <span class="badge">Node.js + TypeScript</span>
+    <span class="badge">Supabase</span>
+    <span class="badge">Gemini API</span>
+    <span class="badge">LINE Messaging API</span>
+    <span class="badge">LIFF + Chart.js</span>
+    <span class="badge">Render + Vercel</span>
+  </div>
+</header>
+
+<div class="prog-box">
+  <div class="prog-top">
+    <span>ความคืบหน้าโปรเจกต์ · <b id="pc">0</b>%</span>
+    <div>
+      <span style="color:var(--muted);font-size:.85rem;margin-right:10px"><b id="pd">0</b>/<span id="pt">0</span> งาน</span>
+      <button class="reset" onclick="resetAll()">ล้างทั้งหมด</button>
+    </div>
+  </div>
+  <div class="prog-bar"><div class="prog-fill" id="pf"></div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab on" onclick="go(0,this)">📊 ภาพรวม</button>
+  <button class="tab" onclick="go(1,this)">🟪 Phase 0</button>
+  <button class="tab" onclick="go(2,this)">🟦 W1 ตั้งฐาน</button>
+  <button class="tab" onclick="go(3,this)">🟨 W2 ใส่สมอง</button>
+  <button class="tab" onclick="go(4,this)">🟧 W3 ฟีเจอร์เด่น</button>
+  <button class="tab" onclick="go(5,this)">🟥 W4 ปิดงาน</button>
+  <button class="tab" onclick="go(6,this)">⚠️ ความเสี่ยง</button>
+</div>
+
+<!-- ══════ 0 ภาพรวม ══════ -->
+<div class="panel on">
+  <div class="card">
+    <h2><span class="bar"></span>🎯 เป้าหมายโปรเจกต์</h2>
+    <div class="tip">สร้าง LINE Chatbot ที่ให้คนทั่วไป <b>จดรายจ่ายด้วยภาษาพูด</b> แล้ว <b>AI ช่วยวางแผนการเงิน</b> ได้จริง — ทดสอบกับผู้ใช้จริง 5 คน ภายใน 1 เดือน</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="bar"></span>📅 Timeline 4 สัปดาห์</h2>
+    <div class="tl">
+      <div class="tl-item" style="border-color:var(--w1)">
+        <div class="wk">WEEK 1</div><h4>🔧 ตั้งฐาน</h4>
+        <p>เชื่อม LINE + Backend + Database เข้าหากัน</p>
+        <div class="goal">✅ บอทตอบได้ + บันทึกลง DB ได้</div>
+      </div>
+      <div class="tl-item" style="border-color:var(--w2)">
+        <div class="wk">WEEK 2 ★ สำคัญสุด</div><h4>🧠 ใส่สมอง AI</h4>
+        <p>Gemini Function Calling + ฟีเจอร์หลักทั้งหมด</p>
+        <div class="goal">✅ MVP ใช้งานได้จริง</div>
+      </div>
+      <div class="tl-item" style="border-color:var(--w3)">
+        <div class="wk">WEEK 3</div><h4>💡 ฟีเจอร์เด่น</h4>
+        <p>AI Planner + OCR สลิป + Dashboard</p>
+        <div class="goal">✅ มีจุดขายต่างจากแอปอื่น</div>
+      </div>
+      <div class="tl-item" style="border-color:var(--w4)">
+        <div class="wk">WEEK 4</div><h4>🎁 ปิดงาน</h4>
+        <p>Deploy + ทดสอบผู้ใช้จริง + SRS</p>
+        <div class="goal">✅ ส่งงานได้</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="bar"></span>🏁 Milestone หลัก</h2>
+    <table>
+      <tr><th>#</th><th>Milestone</th><th>กำหนด</th><th>ถ้าไม่ทัน</th></tr>
+      <tr><td>M1</td><td>บอทตอบ "สวัสดี" ได้</td><td>W1 · D3</td><td class="crit">🚨 หยุดทุกอย่างมาช่วยแก้</td></tr>
+      <tr><td>M2</td><td>บันทึกรายการลง DB ได้</td><td>สิ้น W1</td><td>เลื่อน Dashboard ไป W4</td></tr>
+      <tr><td>M3</td><td><b>MVP ใช้งานได้จริง</b></td><td>สิ้น W2</td><td class="crit">🚨 ตัด LIFF ทิ้ง</td></tr>
+      <tr><td>M4</td><td>AI Planner ทำงาน</td><td>W3 · D17</td><td>ลดเหลือโหมดเดียว</td></tr>
+      <tr><td>M5</td><td>Deploy Render สำเร็จ</td><td>W4 · D22</td><td class="crit">🚨 วิกฤต ต้องเสร็จ</td></tr>
+      <tr><td>M6</td><td>ผู้ใช้จริงเริ่มใช้</td><td>W4 · D23</td><td>ลดเหลือทดสอบ 3 วัน</td></tr>
+      <tr><td>M7</td><td>SRS + สไลด์เสร็จ</td><td>สิ้น W4</td><td>—</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="bar"></span>👥 ทีม 5 คน</h2>
+    <table>
+      <tr><th>คน</th><th>บทบาท</th><th>งานหลัก</th></tr>
+      <tr><td>①</td><td><b>Bot Core</b></td><td>LINE OA · webhook · deploy · security</td></tr>
+      <tr><td>②</td><td><b>Database</b></td><td>schema · query สรุป · recurring · budget</td></tr>
+      <tr><td>③</td><td><b>AI</b></td><td>Gemini · function calling · prompt · Planner</td></tr>
+      <tr><td>④</td><td><b>Frontend</b></td><td>Flex Message · Rich Menu · LIFF 5 หน้า</td></tr>
+      <tr><td>⑤</td><td><b>Integration + Docs</b></td><td>OCR · email · ทดสอบ · <b>SRS</b></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="bar"></span>🏗️ สถาปัตยกรรมระบบ</h2>
+<pre>          ผู้ใช้ (LINE)
+               │  พิมพ์ "ข้าว 50" / ส่งรูปสลิป / กดปุ่ม
+               ▼
+     ┌──────────────────┐
+     │  LINE Messaging  │
+     └────────┬─────────┘
+              │ webhook
+              ▼
+     ┌──────────────────┐      ┌───────────┐
+     │ Backend Node.js  │ ◄──► │  Gemini   │ แปลภาษา→คำสั่ง
+     │  (Render)        │      └───────────┘
+     └────────┬─────────┘
+              ▼
+     ┌──────────────────┐
+     │    Supabase      │ เก็บรายการ / งบ / แผน
+     └────────▲─────────┘
+              │
+     ┌──────────────────┐
+     │ LIFF Dashboard   │ 5 หน้า (Vercel)
+     └──────────────────┘</pre>
+  </div>
+
+  <div class="card">
+    <h2><span class="bar"></span>🔗 ลำดับการทำงาน (Dependency)</h2>
+<pre>LINE OA ──┐
+          ├──► Webhook ──► บันทึก regex ──┐
+DB Schema ┘                               │
+                                          ├──► AI Function Calling
+                          Recurring ──────┘         │
+                                                    ├──► AI Planner
+                          Flex / Rich Menu ─────────┤
+                                                    │
+                          Deploy Render ────────────┴──► ทดสอบผู้ใช้จริง ──► SRS บท 6</pre>
+    <div class="tip"><b>อ่านง่าย ๆ:</b> LINE OA + DB ต้องเสร็จก่อนทุกอย่าง → AI ต้องมีก่อน Planner → ทุกอย่างเสร็จก่อน deploy → deploy เสร็จถึงเก็บผลทดสอบได้</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="bar"></span>✂️ กฎการตัดฟีเจอร์</h2>
+    <div class="grid2">
+      <div class="mini">
+        <h4 style="color:#fca5a5">ตัดได้ (เรียงลำดับ)</h4>
+        <ol>
+          <li>ระบบอีเมล</li>
+          <li>Auto-detect recurring</li>
+          <li>LIFF ลดเหลือ 3 หน้า</li>
+          <li>OCR สลิป</li>
+          <li>AI Planner เหลือโหมดเดียว</li>
+        </ol>
+      </div>
+      <div class="mini">
+        <h4 style="color:var(--accent)">ห้ามตัดเด็ดขาด</h4>
+        <ul>
+          <li>✋ จดรายจ่ายด้วยภาษาพูด</li>
+          <li>✋ สรุปวัน / เดือน</li>
+          <li>✋ แก้ / ลบรายการ</li>
+          <li>✋ ค่าใช้จ่ายประจำ</li>
+          <li>✋ ทดสอบผู้ใช้จริง + SRS</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="bar"></span>📈 KPI วัดความสำเร็จ</h2>
+    <div class="kpi"><span>ความแม่นของ AI ตีความ</span><b>≥ 85%</b></div>
+    <div class="kpi"><span>เวลาตอบกลับ (ข้อความ)</span><b>&lt; 3 วินาที</b></div>
+    <div class="kpi"><span>เวลาตอบกลับ (OCR สลิป)</span><b>&lt; 10 วินาที</b></div>
+    <div class="kpi"><span>ผู้ใช้ที่ใช้ต่อเนื่อง ≥ 5 วัน</span><b>4 / 5 คน</b></div>
+    <div class="kpi"><span>จำนวนรายการที่บันทึกรวม</span><b>≥ 150 รายการ</b></div>
+    <div class="kpi"><span>ความพึงพอใจ</span><b>≥ 4 / 5</b></div>
+    <div class="kpi"><span>ระบบล่ม</span><b>0 ครั้ง</b></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="bar"></span>🚨 5 กฎเหล็กของทีม</h2>
+    <ol>
+      <li><b>จบ W2 ต้องใช้งานได้จริง</b> — ไม่ทันให้ตัดฟีเจอร์ทันที อย่าฝืน</li>
+      <li><b>เขียน SRS ทุกสัปดาห์</b> — อย่ารอ W4</li>
+      <li><b>Pull ก่อนทำงาน · Push ก่อนเลิก</b> ทุกครั้ง</li>
+      <li><b>ห้าม commit .env</b> เด็ดขาด</li>
+      <li><b>W3 วันสุดท้าย freeze ฟีเจอร์</b> — W4 แก้บั๊กอย่างเดียว</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ══════ 1 PHASE 0 ══════ -->
+<div class="panel">
+  <div class="card">
+    <h2><span class="bar" style="background:var(--w0)"></span>🟪 Phase 0 — เตรียมตัว (2-3 วันแรก)</h2>
+
+    <h3>0.1 เครื่องมือที่ทุกคนต้องมี</h3>
+    <label class="chk"><input type="checkbox"><span><i class="who">ทุกคน</i>ติดตั้ง Node.js LTS (v20+) จาก nodejs.org</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">ทุกคน</i>เช็คว่าติดตั้งสำเร็จ: <code>node -v</code> และ <code>npm -v</code></span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">ทุกคน</i>ติดตั้ง VS Code</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">ทุกคน</i>ติดตั้ง Git for Windows</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">ทุกคน</i>ติดตั้ง GitHub Desktop (ใช้แทนคำสั่ง git)</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">ทุกคน</i>ติดตั้ง Postman (ทดสอบ API)</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">ทุกคน</i>สมัคร GitHub account</span></label>
+
+    <h3>0.2 ตั้ง Repository <span class="crit">🔴</span></h3>
+    <label class="chk"><input type="checkbox"><span><i class="who">①</i>สร้าง repo ตั้งเป็น Private</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">①</i>เชิญเพื่อน 4 คนเป็น Collaborator</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">①</i>สร้าง .gitignore ใส่ node_modules/ .env dist/</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">①</i>สร้าง README.md</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">ทุกคน</i>Clone repo ลงเครื่องสำเร็จ</span></label>
+    <div class="warn">⚠️ ตกลงกฎร่วมกัน: <b>กด Pull ก่อนเริ่มงานทุกครั้ง</b> และ <b>Push ก่อนเลิกทุกครั้ง</b></div>
+
+    <h3>0.3 สมัครบริการทั้งหมด</h3>
+    <label class="chk"><input type="checkbox"><span><i class="who">②</i>Supabase — สมัครด้วย GitHub → สร้าง project (region Singapore)</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">③</i>Google AI Studio → Get API Key</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">①</i>Render — สมัครด้วย GitHub</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">④</i>Vercel — สมัครด้วย GitHub</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">①</i>ngrok — สมัคร + เอา authtoken</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">⑤</i>GitHub Student Pack (เผื่อได้โดเมนฟรี)</span></label>
+
+    <h3>0.4 ตกลงกันในทีม</h3>
+    <label class="chk"><input type="checkbox"><span><i class="who">ทุกคน</i>สร้างกลุ่ม LINE ของทีม</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">ทุกคน</i>สร้าง Google Doc กลาง จด API keys / ปัญหา / คำถามอาจารย์</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">ทุกคน</i>นัดประชุมสั้น สัปดาห์ละ 2 ครั้ง (30 นาที)</span></label>
+    <label class="chk"><input type="checkbox"><span><i class="who">⑤</i>เปิดไฟล์ SRS เริ่มเขียนบทที่ 1</span></label>
+  </div>
+</div>
+
+<!-- ══════ 2 W1 ══════ -->
+<div class="panel">
+  <div class="card">
+    <h2><span class="bar" style="background:var(--w1)"></span>🟦 Week 1 — ตั้งฐาน</h2>
+    <div class="tip">🎯 <b>เป้าหมาย:</b> พิมพ์ "ข้าว 50" ในไลน์ แล้วข้อมูลไปโผล่ใน Supabase</div>
+
+    <h3>แผนรายวัน</h3>
+    <table>
+      <tr><th>วัน</th><th>ทำอะไร</th><th>ใคร</th></tr>
+      <tr><td>D1</td><td>ติดตั้งเครื่องมือ · ตั้ง repo · สมัครบริการ</td><td>ทุกคน</td></tr>
+      <tr><td>D2</td><td>สร้าง LINE OA + Messaging API</td><td>①</td></tr>
+      <tr><td>D2-3</td><td>ออกแบบ + สร้างตารางใน Supabase</td><td>②</td></tr>
+      <tr><td>D3-4</td><td><b>M1</b> webhook + ngrok → บอทตอบได้</td><td>①</td></tr>
+      <tr><td>D4-5</td><td>regex บันทึกรายการง่าย ๆ</td><td>②③</td></tr>
+      <tr><td>D5-6</td><td>หน้า HTML เปล่า 5 หน้า + Chart.js</td><td>④</td></tr>
+      <tr><td>D5-7</td><td>สำรวจอีเมลธนาคาร + แบบสอบถาม + SRS บท 1-2</td><td>⑤</td></tr>
+      <tr><td>D7</td><td><b>M2</b> ประชุม + ทดสอบรวม</td><td>ทุกคน</td></tr>
+    </table>
+
+    <h3>1.1 สร้าง LINE OA <span class="crit">🔴</span> <i class="who">①</i></h3>
+    <label class="chk"><input type="checkbox"><span>เข้า manager.line.biz → ล็อกอินด้วย LINE ส่วนตัว</span></label>
+    <label class="chk"><input type="checkbox"><span>สร้างบัญชีใหม่ แบบ "ไม่ผ่านการรับรอง (Unverified)"</span></label>
+    <label class="chk"><input type="checkbox"><span>ชื่อบอท · ประเภท "อื่นๆ" · ประเทศ "ไทย"</span></label>
+    <label class="chk"><input type="checkbox"><span>ได้แพ็กเกจ Free 300 ข้อความ/เดือน (ไม่ต้องใส่บัตร)</span></label>
+
+    <h3>1.2 เปิด Messaging API <i class="who">①</i></h3>
+    <label class="chk"><input type="checkbox"><span>OA Manager → ตั้งค่า → Messaging API → "ใช้ Messaging API"</span></label>
+    <label class="chk"><input type="checkbox"><span>สร้าง Provider ใหม่ (⚠️ ชื่อนี้แก้ยาก คิดให้ดี)</span></label>
+    <label class="chk"><input type="checkbox"><span>ยอมรับเงื่อนไข</span></label>
+
+    <h3>1.3 ปิดระบบตอบอัตโนมัติ <span class="crit">🔴</span> <i class="who">①</i></h3>
+    <div class="warn">⚠️ ถ้าไม่ปิด บอทจะตอบซ้ำซ้อนและทำงานเพี้ยน</div>
+    <label class="chk"><input type="checkbox"><span>ตั้งค่า → การตอบกลับ → โหมดแชท = <b>Chatbot</b></span></label>
+    <label class="chk"><input type="checkbox"><span>ปิด ข้อความตอบกลับอัตโนมัติ (Auto-reply)</span></label>
+    <label class="chk"><input type="checkbox"><span>ปิด ข้อความทักทายเพื่อนใหม่ (Greeting)</span></label>
+    <label class="chk"><input type="checkbox"><span>เปิด Webhook</span></label>
+
+    <h3>1.4 เก็บกุญแจ <i class="who">①</i></h3>
+    <label class="chk"><input type="checkbox"><span>developers.line.biz/console → Basic settings → คัดลอก <b>Channel secret</b></span></label>
+    <label class="chk"><input type="checkbox"><span>Messaging API → กด Issue → คัดลอก <b>Channel access token</b></span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">ใส่ทั้ง 2 ค่าลง .env — ห้าม push ขึ้น GitHub เด็ดขาด</span></label>
+
+    <h3>1.5 โครงสร้าง Backend <i class="who">①</i></h3>
+    <label class="chk"><input type="checkbox"><span>npm init -y</span></label>
+    <label class="chk"><input type="checkbox"><span>npm i express @line/bot-sdk dotenv @supabase/supabase-js</span></label>
+    <label class="chk"><input type="checkbox"><span>npm i -D typescript @types/node @types/express tsx</span></label>
+    <label class="chk"><input type="checkbox"><span>สร้าง tsconfig.json</span></label>
+    <label class="chk"><input type="checkbox"><span>สร้างโฟลเดอร์ src/ (index · routes · services · db · utils)</span></label>
+    <label class="chk"><input type="checkbox"><span>สร้าง .env.example (ไฟล์ตัวอย่างไม่มีค่าจริง)</span></label>
+
+    <h3>1.6 ทำ Webhook ให้ทำงาน <span class="crit">🔴</span> <i class="who">①</i></h3>
+    <label class="chk"><input type="checkbox"><span>เขียน endpoint POST /webhook</span></label>
+    <label class="chk"><input type="checkbox"><span>เขียน endpoint GET /health (ไว้ให้ cron ping)</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">ใส่ signature validation ด้วย x-line-signature</span></label>
+    <label class="chk"><input type="checkbox"><span>รัน npm run dev → port 3000</span></label>
+    <label class="chk"><input type="checkbox"><span>รัน ngrok http 3000 → คัดลอก URL</span></label>
+    <label class="chk"><input type="checkbox"><span>⚠️ ตั้ง ngrok static domain (ฟรี 1 อัน) ไม่งั้น URL เปลี่ยนทุกครั้ง</span></label>
+    <label class="chk"><input type="checkbox"><span>ใส่ Webhook URL ใน LINE → กด Verify → ขึ้น Success</span></label>
+    <label class="chk"><input type="checkbox"><span><b>ทดสอบ:</b> สแกน QR → พิมพ์ "สวัสดี" → บอทตอบได้ ✅</span></label>
+
+    <h3>1.7 ออกแบบ Database <span class="crit">🔴</span> <i class="who">②</i></h3>
+    <label class="chk"><input type="checkbox"><span>ตาราง <b>users</b> — line_user_id, display_name, timezone</span></label>
+    <label class="chk"><input type="checkbox"><span>ตาราง <b>categories</b> — user_id, name, icon, type, is_default</span></label>
+    <label class="chk"><input type="checkbox"><span>ตาราง <b>transactions</b> — amount, type (income/expense/<b>transfer</b>), category_id, note, merchant, occurred_at, source, ref_number</span></label>
+    <label class="chk"><input type="checkbox"><span>ตาราง <b>budgets</b> — user_id, category_id, amount, period</span></label>
+    <label class="chk"><input type="checkbox"><span>ตาราง <b>recurring_rules</b> — name, amount, frequency, day_of_month, next_run, auto_create</span></label>
+    <label class="chk"><input type="checkbox"><span>ตาราง <b>plans</b> — goal_name, target_amount, monthly_save, deadline, status</span></label>
+    <label class="chk"><input type="checkbox"><span>ตาราง <b>user_emails</b> — user_id, email, verified_at</span></label>
+    <label class="chk"><input type="checkbox"><span>ตาราง <b>processed_events</b> — event_id (กัน LINE ส่งซ้ำ)</span></label>
+    <label class="chk"><input type="checkbox"><span>ใส่ Index ที่ transactions(user_id, occurred_at)</span></label>
+    <label class="chk"><input type="checkbox"><span>เปิด Row Level Security (RLS) ทุกตาราง</span></label>
+    <label class="chk"><input type="checkbox"><span>Seed หมวดหมู่เริ่มต้น 8-10 หมวด</span></label>
+
+    <h3>1.8 บันทึกแบบง่าย (ยังไม่ใช้ AI) <i class="who">②③</i></h3>
+    <label class="chk"><input type="checkbox"><span>regex จับ pattern "ชื่อสินค้า + ตัวเลข"</span></label>
+    <label class="chk"><input type="checkbox"><span>บันทึกลง transactions ได้จริง</span></label>
+    <label class="chk"><input type="checkbox"><span>บอทตอบ "✅ บันทึกแล้ว: ข้าว 50 บาท"</span></label>
+    <label class="chk"><input type="checkbox"><span>auto-create user เมื่อมีคน add เพื่อน (event follow)</span></label>
+
+    <h3>1.9 Frontend เริ่มต้น <i class="who">④</i></h3>
+    <label class="chk"><input type="checkbox"><span>สร้างโฟลเดอร์ liff/ แยกจาก backend</span></label>
+    <label class="chk"><input type="checkbox"><span>หน้า HTML เปล่า 5 หน้า + เมนูสลับหน้า</span></label>
+    <label class="chk"><input type="checkbox"><span>ลอง Chart.js วาดกราฟด้วยข้อมูลปลอม</span></label>
+    <label class="chk"><input type="checkbox"><span>ศึกษา @line/liff SDK</span></label>
+
+    <h3>1.10 เอกสาร + สำรวจ <span class="crit">🔴</span> <i class="who">⑤</i></h3>
+    <label class="chk"><input type="checkbox"><span>ทุกคนค้นหา Gmail: กสิกร / kbank / กรุงไทย / krungthai</span></label>
+    <label class="chk"><input type="checkbox"><span>คัดลอกตัวอย่างอีเมลจริง 2-3 ฉบับ (ปิดเลขบัญชี)</span></label>
+    <label class="chk"><input type="checkbox"><span>จด: หัวข้อ · sender · ข้อมูลที่มี (ยอด/วันที่/ผู้รับ/เลขอ้างอิง)</span></label>
+    <label class="chk"><input type="checkbox"><span>แบบสอบถาม <b>ก่อนใช้งาน</b> ให้เพื่อน 5 คนตอบ</span></label>
+    <label class="chk"><input type="checkbox"><span>SRS บทที่ 1-2</span></label>
+  </div>
+</div>
+
+<!-- ══════ 3 W2 ══════ -->
+<div class="panel">
+  <div class="card">
+    <h2><span class="bar" style="background:var(--w2)"></span>🟨 Week 2 — ใส่สมอง AI ★</h2>
+    <div class="tip">🎯 <b>เป้าหมาย:</b> พิมพ์ "เมื่อวานจ่ายค่าเน็ต 599" แล้วบอทเข้าใจและบันทึกถูก<br>⭐ <b>สัปดาห์ที่สำคัญที่สุด</b> — จบสัปดาห์นี้ต้องมี MVP ใช้งานได้จริง</div>
+
+    <h3>แผนรายวัน</h3>
+    <table>
+      <tr><th>วัน</th><th>ทำอะไร</th><th>ใคร</th></tr>
+      <tr><td>D8-9</td><td>ต่อ Gemini + Function Schema 8 ตัว</td><td>③</td></tr>
+      <tr><td>D9-10</td><td>แปลงวันที่/ตัวเลขไทย + timezone</td><td>③</td></tr>
+      <tr><td>D10</td><td>Layered Router (regex → AI)</td><td>③</td></tr>
+      <tr><td>D9-11</td><td>Query สรุป · แก้ · ลบ · ค้นหา</td><td>②</td></tr>
+      <tr><td>D11-12</td><td>ค่าใช้จ่ายประจำ + cron 06:00</td><td>②</td></tr>
+      <tr><td>D10-12</td><td>Flex Message + Quick Reply + Rich Menu</td><td>④</td></tr>
+      <tr><td>D12-13</td><td>Idempotency · ตัวนับ push · error handling</td><td>①</td></tr>
+      <tr><td>D13</td><td>SRS บทที่ 3</td><td>⑤</td></tr>
+      <tr><td>D14</td><td><b>M3</b> ทดสอบรวม + แก้บั๊ก</td><td>ทุกคน</td></tr>
+    </table>
+
+    <h3>2.1 ต่อ Gemini + Function Calling <span class="crit">🔴</span> <i class="who">③</i></h3>
+    <label class="chk"><input type="checkbox"><span>npm i @google/genai</span></label>
+    <label class="chk"><input type="checkbox"><span>ทดสอบเรียก Gemini ธรรมดาให้ได้ก่อน</span></label>
+    <label class="chk"><input type="checkbox"><span>create_transaction (amount, type, category, note, date)</span></label>
+    <label class="chk"><input type="checkbox"><span>create_transaction_batch (หลายรายการในข้อความเดียว)</span></label>
+    <label class="chk"><input type="checkbox"><span>update_transaction / delete_transaction</span></label>
+    <label class="chk"><input type="checkbox"><span>get_summary (today / week / month / custom)</span></label>
+    <label class="chk"><input type="checkbox"><span>query_transactions (ค้นหาแบบมีเงื่อนไข)</span></label>
+    <label class="chk"><input type="checkbox"><span>create_recurring (ตั้งรายการประจำ)</span></label>
+    <label class="chk"><input type="checkbox"><span>simulate_purchase / create_saving_plan</span></label>
+    <label class="chk"><input type="checkbox"><span>เขียน System Prompt ภาษาไทย (บทบาท + กฎ + วันที่ปัจจุบัน)</span></label>
+    <label class="chk"><input type="checkbox"><span>ส่งประวัติแชท 3-5 turn ล่าสุดเข้าไปด้วย</span></label>
+
+    <h3>2.2 ตัวจัดการภาษาไทย <i class="who">③</i></h3>
+    <label class="chk"><input type="checkbox"><span>แปลงเวลา: "เมื่อวาน" "ศุกร์ที่แล้ว" "ต้นเดือน" "3 วันก่อน"</span></label>
+    <label class="chk"><input type="checkbox"><span>ตัวเลข: "ห้าสิบ" "1.2k" "1,500" "50บ"</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">ตั้ง timezone Asia/Bangkok ทุกจุด (พลาดแล้วสรุป "วันนี้" เพี้ยน)</span></label>
+    <label class="chk"><input type="checkbox"><span>ถ้า AI ไม่มั่นใจ → ส่ง Quick Reply ถามกลับ ห้ามเดา</span></label>
+
+    <h3>2.3 Layered AI Router <i class="who">③</i></h3>
+    <label class="chk"><input type="checkbox"><span>ชั้น 1: regex จับ pattern ง่าย → ไม่เรียก AI (~60%)</span></label>
+    <label class="chk"><input type="checkbox"><span>ชั้น 2: ไม่เข้า pattern → เรียก Gemini</span></label>
+    <label class="chk"><input type="checkbox"><span>ทำ interface กลาง สลับ provider ด้วย env (เผื่อ Local LLM)</span></label>
+
+    <h3>2.4 ฟีเจอร์หลัก <i class="who">②③</i></h3>
+    <label class="chk"><input type="checkbox"><span>สรุปวันนี้ — ยอดรวม + แยกหมวด</span></label>
+    <label class="chk"><input type="checkbox"><span>สรุปเดือนนี้ — รายรับ/จ่าย/คงเหลือ + top 3 หมวด</span></label>
+    <label class="chk"><input type="checkbox"><span>ลบรายการล่าสุด + ลบรายการที่ระบุ</span></label>
+    <label class="chk"><input type="checkbox"><span>แก้ไขรายการ ("เมื่อกี้ 50 ไม่ใช่ 500")</span></label>
+    <label class="chk"><input type="checkbox"><span>ค้นหา ("เดือนที่แล้วค่ากาแฟกี่บาท")</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">ตรวจว่า transfer ไม่ถูกนับเป็นรายรับ/รายจ่ายในทุกสูตร</span></label>
+
+    <h3>2.5 ค่าใช้จ่ายประจำ <i class="who">②</i></h3>
+    <label class="chk"><input type="checkbox"><span>สร้างผ่านแชท ("ตั้งค่าเน็ต 599 ทุกวันที่ 5")</span></label>
+    <label class="chk"><input type="checkbox"><span>ดู / แก้ / ลบ รายการประจำ</span></label>
+    <label class="chk"><input type="checkbox"><span>Cron ทุกเช้า 06:00 → สร้างรายการอัตโนมัติ (หรือถามก่อน)</span></label>
+    <label class="chk"><input type="checkbox"><span>หักรายการประจำออกจาก "เงินเหลือใช้" ก่อนคำนวณแผน</span></label>
+
+    <h3>2.6 UI ใน LINE <i class="who">④</i></h3>
+    <label class="chk"><input type="checkbox"><span>Flex Message การ์ดยืนยัน + ปุ่ม [แก้ไข] [ลบ]</span></label>
+    <label class="chk"><input type="checkbox"><span>Flex Message การ์ดสรุปวัน/เดือน</span></label>
+    <label class="chk"><input type="checkbox"><span>Quick Reply เลือกหมวดหมู่ (⚠️ สูงสุด 13 ปุ่ม)</span></label>
+    <label class="chk"><input type="checkbox"><span>Rich Menu 6 ช่อง (จด/สรุปวัน/สรุปเดือน/แผน/Dashboard/ตั้งค่า)</span></label>
+    <label class="chk"><input type="checkbox"><span>ปุ่ม Undo ภายใน 60 วินาที</span></label>
+
+    <h3>2.7 ความเสถียร <i class="who">①</i></h3>
+    <label class="chk"><input type="checkbox"><span>Idempotency — เก็บ webhookEventId กันส่งซ้ำ</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">ตัวนับ push message → หยุดอัตโนมัติที่ 280/300</span></label>
+    <label class="chk"><input type="checkbox"><span>ใช้ reply ให้มากที่สุด (ฟรี) — push เฉพาะจำเป็น</span></label>
+    <label class="chk"><input type="checkbox"><span>Error handling — พังต้องตอบ "ขออภัย ลองใหม่" ไม่ใช่เงียบ</span></label>
+
+    <h3>✅ Definition of Done (W2)</h3>
+    <label class="chk"><input type="checkbox"><span>พิมพ์ภาษาพูด 10 แบบ → บอทเข้าใจถูก ≥ 8/10</span></label>
+    <label class="chk"><input type="checkbox"><span>สรุปวัน/เดือน ตัวเลขตรงกับข้อมูลจริง</span></label>
+    <label class="chk"><input type="checkbox"><span>แก้/ลบรายการได้</span></label>
+    <label class="chk"><input type="checkbox"><span>Rich Menu ใช้งานได้</span></label>
+    <label class="chk"><input type="checkbox"><span>เพื่อนในทีมลองใช้แล้วไม่พัง</span></label>
+  </div>
+</div>
+
+<!-- ══════ 4 W3 ══════ -->
+<div class="panel">
+  <div class="card">
+    <h2><span class="bar" style="background:var(--w3)"></span>🟧 Week 3 — ฟีเจอร์เด่น</h2>
+    <div class="tip">🎯 <b>เป้าหมาย:</b> ถาม "อยากซื้อหูฟัง 5,000 ไหวไหม" แล้วได้แผนการเงินพร้อมปุ่มยืนยัน</div>
+
+    <h3>แผนรายวัน</h3>
+    <table>
+      <tr><th>วัน</th><th>ทำอะไร</th><th>ใคร</th></tr>
+      <tr><td>D15</td><td>สูตร Disposable Income</td><td>③</td></tr>
+      <tr><td>D16-17</td><td><b>M4</b> โหมด A: ซื้อไหวไหม</td><td>③</td></tr>
+      <tr><td>D17-18</td><td>โหมด B: วางแผนเก็บเงิน 3 ทางเลือก</td><td>③</td></tr>
+      <tr><td>D18-19</td><td>ปุ่มยืนยัน + state machine + ติดตามแผน</td><td>③②</td></tr>
+      <tr><td>D16-18</td><td>OCR สลิป + dedup + ยืนยันก่อนบันทึก</td><td>⑤</td></tr>
+      <tr><td>D15-20</td><td>LIFF Dashboard 5 หน้า</td><td>④</td></tr>
+      <tr><td>D19-20</td><td>Budget Alert + Auto-learning หมวดหมู่</td><td>②</td></tr>
+      <tr><td>D20</td><td>SRS บทที่ 4-5</td><td>⑤</td></tr>
+      <tr><td>D21</td><td>ทดสอบรวม + <b>freeze ฟีเจอร์</b></td><td>ทุกคน</td></tr>
+    </table>
+
+    <h3>3.1 สูตรหัวใจ AI Planner</h3>
+<pre>เงินเหลือใช้ = รายได้เฉลี่ย 3 เดือน
+             − รายการประจำ (recurring)
+             − รายจ่ายจำเป็นเฉลี่ย (อาหาร/เดินทาง)
+             − buffer 15%
+
+กฎกันผู้ใช้เดือดร้อน:
+  Σ ยอดออมทุกแผน ≤ 0.8 × เงินเหลือใช้
+  แผน active ≤ 3 แผน</pre>
+
+    <h3>3.2 AI Planner <span class="crit">🔴</span> <i class="who">③</i></h3>
+    <label class="chk"><input type="checkbox"><span>เขียนสูตร Disposable Income</span></label>
+    <label class="chk"><input type="checkbox"><span><b>โหมด A</b> รับ "อยากซื้อ X ราคา Y ไหวไหม"</span></label>
+    <label class="chk"><input type="checkbox"><span>คำนวณ: เงินคงเหลือ / งบต่อวัน / ระดับความเสี่ยง</span></label>
+    <label class="chk"><input type="checkbox"><span>Flex Card + ปุ่ม [ซื้อเลย] [เลื่อนเดือนหน้า] [ดูแผนประหยัด]</span></label>
+    <label class="chk"><input type="checkbox"><span><b>โหมด B</b> AI สร้าง 3 ทางเลือก (ไม่ปรับ / ลดนิดหน่อย / ลดจริงจัง)</span></label>
+    <label class="chk"><input type="checkbox"><span>แสดงเป็น Carousel + ปุ่มยืนยัน</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">ปุ่มยืนยันใช้ Postback ส่ง plan_id — ห้ามให้พิมพ์ "ตกลง"</span></label>
+    <label class="chk"><input type="checkbox"><span>เปลี่ยน status draft → active เมื่อกดยืนยัน</span></label>
+    <label class="chk"><input type="checkbox"><span>Cron รายวัน: เช็คใช้เกินแผนไหม → เตือน</span></label>
+    <label class="chk"><input type="checkbox"><span>เกินแผน 3 วันติด → AI เสนอปรับแผนใหม่</span></label>
+    <label class="chk"><input type="checkbox"><span>แสดง Progress bar ความคืบหน้า</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">จำกัด 3 แผน active + ผลรวมไม่เกิน 80% → บล็อกถ้าเกิน</span></label>
+
+    <h3>3.3 OCR อ่านสลิป <i class="who">⑤</i></h3>
+    <label class="chk"><input type="checkbox"><span>รับ event image → ดึงไฟล์จาก LINE Content API</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">reply "📸 กำลังอ่านสลิป..." ทันที (LINE timeout ~10 วิ)</span></label>
+    <label class="chk"><input type="checkbox"><span>ใช้ Loading Animation API (ฟรี ไม่นับโควตา)</span></label>
+    <label class="chk"><input type="checkbox"><span>Gemini Vision → JSON: ยอด · วันเวลา · ผู้รับ · ธนาคาร · <b>ref</b></span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">Dedup ด้วย ref number กันบันทึกซ้ำ</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">ให้ผู้ใช้ยืนยันก่อนบันทึกเสมอ (OCR อ่านเลข 0/8 พลาดได้)</span></label>
+    <label class="chk"><input type="checkbox"><span>รองรับใบเสร็จหลายรายการ → แตกเป็นหลาย transaction</span></label>
+
+    <h3>3.4 LIFF Dashboard <span class="crit">🔴</span> <i class="who">④</i></h3>
+    <label class="chk"><input type="checkbox"><span>สร้าง LIFF App ใน LINE Developers → ได้ LIFF ID</span></label>
+    <label class="chk"><input type="checkbox"><span>Deploy ขึ้น Vercel → ใส่ URL ใน LIFF Endpoint</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">ส่ง liff.getIDToken() ให้ backend verify กับ LINE ก่อนเสมอ</span></label>
+    <label class="chk"><input type="checkbox"><span><b>1. ภาพรวม</b> — คงเหลือ · รายรับ/จ่าย · progress งบ · 5 รายการล่าสุด · แผน active</span></label>
+    <label class="chk"><input type="checkbox"><span><b>2. วิเคราะห์</b> — วงกลมตามหมวด · แท่ง 6 เดือน · เทียบเดือนก่อน</span></label>
+    <label class="chk"><input type="checkbox"><span><b>3. หมวดหมู่</b> — เพิ่ม/แก้/ลบ · ตั้งงบ · เลือกไอคอน</span></label>
+    <label class="chk"><input type="checkbox"><span><b>4. รายการ</b> — ตาราง + ฟิลเตอร์ · แก้/ลบ · Export CSV</span></label>
+    <label class="chk"><input type="checkbox"><span><b>5. ตั้งค่า</b> — ผูกอีเมล · แจ้งเตือน · รายการประจำ · <b>ลบข้อมูลทั้งหมด (PDPA)</b></span></label>
+
+    <h3>3.5 ฟีเจอร์เสริม (ถ้าเวลาเหลือ) <i class="who">②</i></h3>
+    <label class="chk"><input type="checkbox"><span>Auto-learning หมวดหมู่ (ย้ายซ้ำ 2 ครั้ง → จำไว้)</span></label>
+    <label class="chk"><input type="checkbox"><span>Auto-detect รายการประจำ (ยอดเดิมซ้ำ 3 เดือน → ถาม)</span></label>
+    <label class="chk"><input type="checkbox"><span>Budget Alert เตือนที่ 80% / 100%</span></label>
+    <label class="chk"><input type="checkbox"><span>Anomaly detection ("ค่าอาหารสูงกว่าปกติ 40%")</span></label>
+  </div>
+</div>
+
+<!-- ══════ 5 W4 ══════ -->
+<div class="panel">
+  <div class="card">
+    <h2><span class="bar" style="background:var(--w4)"></span>🟥 Week 4 — ปิดงาน</h2>
+    <div class="tip">🎯 <b>เป้าหมาย:</b> เพื่อน 5 คนใช้จริงได้แม้ปิดคอมตัวเอง + เอกสารครบ</div>
+
+    <h3>แผนรายวัน</h3>
+    <table>
+      <tr><th>วัน</th><th>ทำอะไร</th><th>ใคร</th></tr>
+      <tr><td>D22</td><td><b>M5</b> Deploy Render + เปลี่ยน webhook + cron ping</td><td>①</td></tr>
+      <tr><td>D22</td><td>Deploy LIFF ขึ้น Vercel</td><td>④</td></tr>
+      <tr><td>D23</td><td><b>M6</b> Onboarding เพื่อน 5 คน + เริ่มใช้จริง</td><td>ทุกคน</td></tr>
+      <tr><td>D23-24</td><td>ระบบอีเมล (Gmail กลาง + IMAP + parser)</td><td>⑤</td></tr>
+      <tr><td>D23-27</td><td>🔥 เฝ้าระบบ + แก้บั๊กที่ผู้ใช้เจอ</td><td>ทุกคน</td></tr>
+      <tr><td>D25-26</td><td>เก็บ feedback + แบบสอบถามหลังใช้</td><td>⑤</td></tr>
+      <tr><td>D25-27</td><td>SRS บท 6-7 + คู่มือ + screenshot</td><td>⑤</td></tr>
+      <tr><td>D27</td><td>สไลด์ + <b>อัดวิดีโอเดโมสำรอง</b></td><td>ทุกคน</td></tr>
+      <tr><td>D28</td><td>ซ้อมนำเสนอ 2 รอบ + ตรวจ checklist</td><td>ทุกคน</td></tr>
+    </table>
+
+    <h3>4.1 Deploy Production <span class="crit">🔴</span> <i class="who">①</i></h3>
+    <label class="chk"><input type="checkbox"><span>Deploy backend ขึ้น Render (เชื่อม GitHub repo)</span></label>
+    <label class="chk"><input type="checkbox"><span>ใส่ Environment Variables ทั้งหมดใน Render Dashboard</span></label>
+    <label class="chk"><input type="checkbox"><span>เปลี่ยน Webhook URL จาก ngrok → Render</span></label>
+    <label class="chk"><input type="checkbox"><span>กด Verify ใหม่ → Success</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">GitHub Actions ping /health ทุก 10 นาที (ไม่งั้น Render หลับ)</span></label>
+    <label class="chk"><input type="checkbox"><span>ตั้ง cron รายวัน (สรุป 21:00 / recurring 06:00)</span></label>
+    <label class="chk"><input type="checkbox"><span>ทดสอบ: ปิดคอมตัวเองแล้วบอทยังทำงาน</span></label>
+
+    <h3>4.2 ระบบอีเมล <i class="who">⑤</i></h3>
+    <label class="chk"><input type="checkbox"><span>สร้าง Gmail กลางใหม่ 1 บัญชี</span></label>
+    <label class="chk"><input type="checkbox"><span>เปิด 2-Step Verification</span></label>
+    <label class="chk"><input type="checkbox"><span>สร้าง App Password 16 ตัว → ใส่ .env ทันที (แสดงครั้งเดียว)</span></label>
+    <label class="chk"><input type="checkbox"><span>เพื่อน 5 คนตั้ง Forwarding มาที่กล่องกลาง + ยืนยัน</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">ตั้ง Filter forward เฉพาะเมลธนาคาร (PDPA)</span></label>
+    <label class="chk"><input type="checkbox"><span>npm i imapflow mailparser</span></label>
+    <label class="chk"><input type="checkbox"><span>Cron เช็คเมลใหม่ทุก 5 นาที</span></label>
+    <label class="chk"><input type="checkbox"><span>ดึง email ต้นทางจาก header → จับคู่ LINE userId</span></label>
+    <label class="chk"><input type="checkbox"><span>ชั้น 1 regex → ชั้น 2 Gemini</span></label>
+    <label class="chk"><input type="checkbox"><span>สร้าง draft → push ให้กด [ยืนยัน] [แก้ไข] [ทิ้ง]</span></label>
+    <label class="chk"><input type="checkbox"><span>Mark \Seen หลังประมวลผล กันอ่านซ้ำ</span></label>
+    <label class="chk"><input type="checkbox"><span>Flow ผูกอีเมลในบอท (รหัส 6 หลัก)</span></label>
+
+    <h3>4.3 ทดสอบผู้ใช้จริง <span class="crit">🔴</span> <i class="who">ทุกคน</i></h3>
+    <label class="chk"><input type="checkbox"><span>เพื่อน 5 คนใช้จริง อย่างน้อย 5-7 วัน</span></label>
+    <label class="chk"><input type="checkbox"><span>สร้างช่องทางรับ feedback (กลุ่ม LINE / Google Form)</span></label>
+    <label class="chk"><input type="checkbox"><span>เก็บสถิติ: จำนวนรายการ · ความแม่น AI · ฟีเจอร์ที่ใช้บ่อย</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">แบบสอบถามหลังใช้งาน เทียบกับก่อนใช้</span></label>
+    <label class="chk"><input type="checkbox"><span>แก้บั๊กตามลำดับความรุนแรง</span></label>
+
+    <h3>4.4 ตรวจสอบก่อนส่ง</h3>
+    <label class="chk"><input type="checkbox"><span class="crit">ไม่มี API key หลุดใน GitHub (เช็ค commit history)</span></label>
+    <label class="chk"><input type="checkbox"><span>.env อยู่ใน .gitignore</span></label>
+    <label class="chk"><input type="checkbox"><span>Signature validation ทำงาน</span></label>
+    <label class="chk"><input type="checkbox"><span>LIFF verify ID token</span></label>
+    <label class="chk"><input type="checkbox"><span>RLS เปิดครบทุกตาราง</span></label>
+    <label class="chk"><input type="checkbox"><span>มีปุ่มลบข้อมูลทั้งหมด (PDPA)</span></label>
+    <label class="chk"><input type="checkbox"><span>transfer ไม่ถูกนับในงบ</span></label>
+    <label class="chk"><input type="checkbox"><span>Timezone Asia/Bangkok ถูกต้องทุกที่</span></label>
+    <label class="chk"><input type="checkbox"><span>ยอดสรุปตรงกับข้อมูลจริง (เช็คมือ)</span></label>
+    <label class="chk"><input type="checkbox"><span>Push message ยังไม่เกินโควตา 300</span></label>
+    <label class="chk"><input type="checkbox"><span>ทดสอบข้อความประหลาด ๆ แล้วบอทไม่พัง</span></label>
+
+    <h3>4.5 เอกสาร SRS <span class="crit">🔴</span> <i class="who">⑤</i></h3>
+    <label class="chk"><input type="checkbox"><span>บท 1 — บทนำ · ที่มา · วัตถุประสงค์ · ขอบเขต</span></label>
+    <label class="chk"><input type="checkbox"><span>บท 2 — ภาพรวมระบบ · ผู้ใช้เป้าหมาย · สภาพแวดล้อม</span></label>
+    <label class="chk"><input type="checkbox"><span>บท 3 — Functional Requirements (FR-01, FR-02...)</span></label>
+    <label class="chk"><input type="checkbox"><span>บท 4 — Non-functional (ประสิทธิภาพ · ความปลอดภัย · PDPA)</span></label>
+    <label class="chk"><input type="checkbox"><span>บท 5 — Use Case · ER · Architecture · Sequence Diagram</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">บท 6 — ผลทดสอบกับผู้ใช้จริง ← เกณฑ์เน้นข้อนี้ที่สุด</span></label>
+    <label class="chk"><input type="checkbox"><span>บท 7 — สรุป · ปัญหาที่พบ · แนวทางพัฒนาต่อ</span></label>
+    <label class="chk"><input type="checkbox"><span>ภาคผนวก — คู่มือใช้งาน + screenshot</span></label>
+
+    <h3>4.6 เตรียมนำเสนอ <i class="who">ทุกคน</i></h3>
+    <label class="chk"><input type="checkbox"><span>สไลด์ 10-15 หน้า</span></label>
+    <label class="chk"><input type="checkbox"><span class="crit">อัดวิดีโอเดโมสำรอง (เผื่อเน็ตห้องเรียนพัง)</span></label>
+    <label class="chk"><input type="checkbox"><span>เตรียมบัญชีทดสอบที่มีข้อมูลสมบูรณ์ (อย่าเดโมบัญชีเปล่า)</span></label>
+    <label class="chk"><input type="checkbox"><span>ซ้อมพูด 2 รอบ + จับเวลา</span></label>
+    <label class="chk"><input type="checkbox"><span>เตรียมตอบ: ต่างจากแอปในตลาดยังไง / แม่นแค่ไหน / ปลอดภัยไหม</span></label>
+
+    <h3>⚪ Optional — ถ้าเหลือเวลาจริง ๆ</h3>
+    <label class="chk"><input type="checkbox"><span>ติดตั้ง LM Studio บน Windows (ใช้ Vulkan backend ไม่ต้องยุ่ง ROCm)</span></label>
+    <label class="chk"><input type="checkbox"><span>โหลด Qwen2.5-7B-Instruct หรือ Typhoon 2 (Q4)</span></label>
+    <label class="chk"><input type="checkbox"><span>เชื่อมเป็น fallback เมื่อ Gemini ล่ม</span></label>
+    <div class="warn">⚠️ <b>ห้ามเอา Local LLM เข้า critical path เด็ดขาด</b> — วันเดโมเครื่องดับ = จบ</div>
+  </div>
+</div>
+
+<!-- ══════ 6 ความเสี่ยง ══════ -->
+<div class="panel">
+  <div class="card">
+    <h2><span class="bar" style="background:#ef4444"></span>⚠️ Risk Register</h2>
+
+    <h3>🟦 Week 1</h3>
+    <table>
+      <tr><th>ความเสี่ยง</th><th>ทางแก้</th></tr>
+      <tr><td>Webhook Verify ไม่ผ่าน</td><td>เช็ค path /webhook · ngrok ยังรันไหม · signature ถูกไหม</td></tr>
+      <tr><td>ngrok URL เปลี่ยนทุกครั้ง</td><td>ตั้ง static domain (ฟรี 1 อัน) ตั้งแต่แรก</td></tr>
+      <tr><td class="crit">ไม่มีใครได้อีเมลจากธนาคาร</td><td>เปลี่ยนไปเน้น Shopee/Grab/Netflix + เน้นรูปสลิป</td></tr>
+      <tr><td>ทีมงงเรื่อง Git</td><td>GitHub Desktop · branch main เดียว · แบ่งไฟล์ให้ชัด</td></tr>
+    </table>
+
+    <h3>🟨 Week 2</h3>
+    <table>
+      <tr><th>ความเสี่ยง</th><th>ทางแก้</th></tr>
+      <tr><td>AI คืน JSON พัง</td><td>try-catch + retry 1 ครั้ง + fallback ถามผู้ใช้</td></tr>
+      <tr><td>AI ตีความวันที่ผิด</td><td>แปลง "เมื่อวาน" ด้วย rule-based ก่อนส่งเข้า AI</td></tr>
+      <tr><td class="crit">สรุป "วันนี้" เพี้ยน</td><td>ตั้ง timezone Asia/Bangkok ทุกจุด ทั้ง DB และโค้ด</td></tr>
+      <tr><td>โควตา Gemini หมด</td><td>Layered Router กรอง 60% ออกก่อนถึง AI</td></tr>
+      <tr><td>transfer ถูกนับเป็นรายรับ</td><td>เขียน unit test เช็คสูตรคำนวณ</td></tr>
+    </table>
+
+    <h3>🟧 Week 3</h3>
+    <table>
+      <tr><th>ความเสี่ยง</th><th>ทางแก้</th></tr>
+      <tr><td class="crit">OCR ช้าเกิน 10 วิ → LINE timeout</td><td>reply "กำลังอ่าน..." ทันที + Loading Animation</td></tr>
+      <tr><td>สลิปเดิมบันทึกซ้ำ</td><td>dedup ด้วย ref number</td></tr>
+      <tr><td>OCR อ่านเลขผิด</td><td>บังคับให้ผู้ใช้ยืนยันก่อนบันทึกเสมอ</td></tr>
+      <tr><td>LIFF ทำไม่ทัน</td><td>ตัดเหลือ 3 หน้า (ภาพรวม / รายการ / ตั้งค่า)</td></tr>
+      <tr><td class="crit">ปลอม userId ดูข้อมูลคนอื่น</td><td>verify liff.getIDToken() ที่ backend เสมอ</td></tr>
+    </table>
+
+    <h3>🟥 Week 4 (อันตรายที่สุด)</h3>
+    <table>
+      <tr><th>ความเสี่ยง</th><th>ทางแก้</th></tr>
+      <tr><td class="crit">Render หลับ 15 นาที → ข้อความแรกหาย</td><td>GitHub Actions ping /health ทุก 10 นาที</td></tr>
+      <tr><td class="crit">API key หลุด GitHub</td><td>เช็ค commit history · ถ้าหลุด revoke ทันที</td></tr>
+      <tr><td>Push message เกิน 300</td><td>ตัวนับ DB หยุดที่ 280 · ใช้ reply เป็นหลัก</td></tr>
+      <tr><td>เน็ตห้องเรียนพังตอนเดโม</td><td>วิดีโอสำรอง + บัญชีที่มีข้อมูลพร้อม</td></tr>
+      <tr><td>SRS ไม่ทัน</td><td>เขียนมาตั้งแต่ W1 เหลือแค่บท 6-7</td></tr>
+    </table>
+  </div>
+</div>
+
+<footer>อัปเดตล่าสุด: กันยายน 2026 · ความคืบหน้าบันทึกอัตโนมัติในเบราว์เซอร์นี้</footer>
+</div>
+
+<script>
+const KEY='roadmap_progress_v1';
+const boxes=[...document.querySelectorAll('.chk input')];
+boxes.forEach((b,i)=>b.dataset.i=i);
+document.getElementById('pt').textContent=boxes.length;
+
+function save(){
+  localStorage.setItem(KEY,JSON.stringify(boxes.map(b=>b.checked)));
+}
+function load(){
+  try{
+    const d=JSON.parse(localStorage.getItem(KEY)||'[]');
+    d.forEach((v,i)=>{if(boxes[i])boxes[i].checked=v});
+  }catch(e){}
+}
+function update(){
+  const n=boxes.filter(b=>b.checked).length;
+  const p=boxes.length?Math.round(n/boxes.length*100):0;
+  document.getElementById('pc').textContent=p;
+  document.getElementById('pd').textContent=n;
+  document.getElementById('pf').style.width=p+'%';
+}
+boxes.forEach(b=>b.addEventListener('change',()=>{save();update()}));
+
+function go(i,el){
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('on',j===i));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function resetAll(){
+  if(confirm('ล้างความคืบหน้าทั้งหมด?')){
+    boxes.forEach(b=>b.checked=false);save();update();
+  }
+}
+load();update();
+</script>
+</body>
+</html>
